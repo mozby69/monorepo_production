@@ -1,0 +1,1 @@
+export { factoryUser } from "./user.factory";

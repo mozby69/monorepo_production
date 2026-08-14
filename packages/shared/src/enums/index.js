@@ -1,0 +1,5 @@
+export var UserStatus;
+(function (UserStatus) {
+    UserStatus["ACTIVE"] = "ACTIVE";
+    UserStatus["INACTIVE"] = "INACTIVE";
+})(UserStatus || (UserStatus = {}));

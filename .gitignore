@@ -1,7 +1,80 @@
-node_modules
-dist
-.next
+# ------------------------
+# Dependencies
+# ------------------------
+node_modules/
+
+
+# ------------------------
+# Environment files
+# ------------------------
 .env
-.env.local
-coverage
-pnpm-lock.yaml
+.env.*
+!.env.example
+
+
+# ------------------------
+# Build / Output
+# ------------------------
+.next/
+out/
+dist/
+build/
+
+
+# ------------------------
+# Turborepo
+# ------------------------
+.turbo/
+
+
+# ------------------------
+# Testing
+# ------------------------
+coverage/
+
+
+# ------------------------
+# Prisma generated output
+# ------------------------
+generated/prisma/
+
+
+# ------------------------
+# Logs
+# ------------------------
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+
+# ------------------------
+# TypeScript
+# ------------------------
+*.tsbuildinfo
+next-env.d.ts
+
+
+# ------------------------
+# Vercel
+# ------------------------
+.vercel/
+
+
+# ------------------------
+# OS / Misc
+# ------------------------
+.DS_Store
+Thumbs.db
+*.pem
+
+
+# ------------------------
+# IDE
+# ------------------------
+.idea/
+
+# Optional:
+# .vscode/

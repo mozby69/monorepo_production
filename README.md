@@ -1,0 +1,2537 @@
+# Full-Stack TypeScript Monorepo
+
+A reusable, production-oriented full-stack TypeScript monorepo architecture for building modern web applications with **Next.js, React, Express, Prisma, PostgreSQL, TanStack Query, Zod, Socket.IO, pnpm Workspaces, and Turborepo**.
+
+This repository is designed as a common application foundation rather than being tied to a specific business domain.
+
+It establishes consistent conventions for frontend architecture, backend architecture, authentication, authorization, shared contracts, validation, database access, real-time communication, logging, testing, and deployment.
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Goals](#goals)
+- [Tech Stack](#tech-stack)
+- [Architecture Overview](#architecture-overview)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Monorepo Architecture](#monorepo-architecture)
+- [Frontend Architecture](#frontend-architecture)
+- [Backend Architecture](#backend-architecture)
+- [Shared Package](#shared-package)
+- [Authentication](#authentication)
+- [Authorization](#authorization)
+- [Validation](#validation)
+- [API Architecture](#api-architecture)
+- [Database Architecture](#database-architecture)
+- [Real-Time Communication](#real-time-communication)
+- [Error Handling](#error-handling)
+- [Logging and Observability](#logging-and-observability)
+- [Testing Strategy](#testing-strategy)
+- [Naming Conventions](#naming-conventions)
+- [Development Guidelines](#development-guidelines)
+- [Build](#build)
+- [Production](#production)
+- [Security Principles](#security-principles)
+- [Architectural Principles](#architectural-principles)
+- [Adding a New Feature](#adding-a-new-feature)
+- [Future Improvements](#future-improvements)
+- [Using This Architecture for a New Project](#using-this-architecture-for-a-new-project)
+- [License](#license)
+
+---
+
+# Overview
+
+This repository provides a standardized foundation for building full-stack applications using a TypeScript monorepo.
+
+The workspace contains separate frontend and backend applications together with reusable packages shared between them.
+
+```text
+workspace/
+│
+├── apps/
+│   ├── web/                  # Next.js frontend application
+│   └── api/                  # Express backend application
+│
+├── packages/
+│   ├── shared/               # Shared schemas, types, constants, and enums
+│   ├── eslint-config/        # Shared ESLint configuration
+│   └── typescript-config/    # Shared TypeScript configuration
+│
+├── package.json
+├── pnpm-workspace.yaml
+├── pnpm-lock.yaml
+├── turbo.json
+└── tsconfig.json
+```
+
+The architecture is intended to be reused across different application domains.
+
+Individual projects can introduce their own business modules without changing the fundamental application structure.
+
+---
+
+# Goals
+
+The architecture is designed around the following principles:
+
+- Clear separation of concerns
+- Feature-based organization
+- Strong TypeScript type safety
+- Shared frontend/backend contracts
+- Runtime validation
+- Secure authentication and authorization
+- Reusable UI and application infrastructure
+- Predictable backend layering
+- Scalable database access
+- Structured logging
+- Testability
+- Maintainability
+- Production readiness
+- Consistent development conventions
+
+The goal is not to create unnecessary abstraction.
+
+The architecture should remain understandable while providing enough structure for applications to grow safely.
+
+---
+
+# Tech Stack
+
+## Frontend
+
+| Technology | Purpose |
+|---|---|
+| Next.js | Frontend framework |
+| React | UI library |
+| TypeScript | Static type safety |
+| Tailwind CSS | Styling |
+| TanStack Query | Server-state management |
+| Axios | HTTP client |
+| Zod | Runtime validation |
+| Socket.IO Client | Real-time communication |
+| Boneyard.js | Skeleton/loading states |
+
+## Backend
+
+| Technology | Purpose |
+|---|---|
+| Node.js | JavaScript runtime |
+| Express | HTTP API framework |
+| TypeScript | Static type safety |
+| Prisma | ORM and database access |
+| PostgreSQL | Relational database |
+| Zod | Request/data validation |
+| JWT | Authentication tokens |
+| Socket.IO | Real-time communication |
+| Pino | Structured logging |
+| pino-http | HTTP request logging |
+| pino-pretty | Development log formatting |
+
+## Monorepo
+
+| Technology | Purpose |
+|---|---|
+| pnpm | Package manager |
+| pnpm Workspaces | Workspace/package management |
+| Turborepo | Monorepo task orchestration |
+| TypeScript | Shared type system |
+
+## Testing
+
+| Technology | Purpose |
+|---|---|
+| Vitest | Unit/integration testing |
+| Supertest | Express API testing |
+| Playwright | End-to-end browser testing |
+
+---
+
+# Architecture Overview
+
+```text
+                         pnpm Workspace
+                              │
+          ┌───────────────────┼───────────────────┐
+          │                   │                   │
+          ▼                   ▼                   ▼
+      apps/web            apps/api        packages/shared
+       Next.js             Express          Schemas
+       React               Prisma           Types
+       Query               Socket.IO        Constants
+       Axios               Pino             Enums
+          │                   │                   │
+          │                   └─────────┬─────────┘
+          │                             │
+          └──────── HTTP / Socket.IO ───┘
+                                        │
+                                        ▼
+                                   PostgreSQL
+```
+
+The frontend and backend remain independent applications.
+
+Shared transport contracts and common definitions live inside `@repo/shared`.
+
+---
+
+# Project Structure
+
+A high-level workspace structure:
+
+```text
+workspace/
+│
+├── apps/
+│   │
+│   ├── web/
+│   │   ├── public/
+│   │   ├── bones/
+│   │   ├── src/
+│   │   │   ├── app/
+│   │   │   ├── modules/
+│   │   │   ├── components/
+│   │   │   ├── config/
+│   │   │   ├── hooks/
+│   │   │   ├── providers/
+│   │   │   ├── lib/
+│   │   │   ├── utils/
+│   │   │   ├── constants/
+│   │   │   └── types/
+│   │   │
+│   │   ├── tests/
+│   │   ├── boneyard.config.json
+│   │   ├── next.config.ts
+│   │   ├── tsconfig.json
+│   │   └── package.json
+│   │
+│   └── api/
+│       ├── prisma/
+│       │   ├── schema.prisma
+│       │   ├── migrations/
+│       │   ├── factories/
+│       │   └── seeders/
+│       │
+│       ├── logs/
+│       ├── tests/
+│       │
+│       └── src/
+│           ├── config/
+│           ├── lib/
+│           ├── modules/
+│           ├── middleware/
+│           ├── socket/
+│           ├── errors/
+│           ├── types/
+│           ├── app.ts
+│           └── server.ts
+│
+├── packages/
+│   ├── shared/
+│   ├── eslint-config/
+│   └── typescript-config/
+│
+├── package.json
+├── pnpm-workspace.yaml
+├── pnpm-lock.yaml
+├── turbo.json
+└── tsconfig.json
+```
+
+---
+
+# Getting Started
+
+## Prerequisites
+
+Install the following:
+
+- Node.js
+- pnpm
+- PostgreSQL
+- Git
+
+Verify the installations:
+
+```bash
+node --version
+pnpm --version
+git --version
+```
+
+---
+
+## Install Dependencies
+
+From the workspace root:
+
+```bash
+pnpm install
+```
+
+pnpm installs dependencies for all workspace applications and packages and creates the necessary local workspace links.
+
+---
+
+## Environment Variables
+
+Frontend and backend applications should provide `.env.example` files.
+
+Create local environment files:
+
+```text
+apps/web/.env
+apps/api/.env
+```
+
+Example backend database configuration:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
+```
+
+Never commit production credentials or secrets.
+
+---
+
+## Database
+
+Generate the Prisma client:
+
+```bash
+pnpm --filter api exec prisma generate
+```
+
+Apply development migrations:
+
+```bash
+pnpm --filter api exec prisma migrate dev
+```
+
+Seed the database using the configured project seed command.
+
+Example:
+
+```bash
+pnpm --filter api seed
+```
+
+---
+
+## Development
+
+Run the complete workspace:
+
+```bash
+pnpm dev
+```
+
+Run only the frontend:
+
+```bash
+pnpm --filter web dev
+```
+
+Run only the backend:
+
+```bash
+pnpm --filter api dev
+```
+
+---
+
+# Monorepo Architecture
+
+## pnpm Workspaces
+
+pnpm Workspaces manages applications and shared packages from a single repository.
+
+Responsibilities include:
+
+- Dependency installation
+- Workspace package discovery
+- Local package linking
+- Shared dependency management
+- Package filtering
+
+Examples:
+
+```bash
+pnpm --filter web dev
+pnpm --filter api dev
+```
+
+---
+
+## Turborepo
+
+Turborepo manages tasks across the workspace.
+
+Typical tasks include:
+
+```text
+dev
+build
+lint
+test
+```
+
+Turbo understands package dependencies and can execute tasks in the correct order.
+
+Example:
+
+```json
+{
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"]
+    }
+  }
+}
+```
+
+Turborepo provides:
+
+- Parallel task execution
+- Dependency-aware builds
+- Task caching
+- Workspace orchestration
+
+---
+
+# Frontend Architecture
+
+The frontend follows a feature-based architecture.
+
+```text
+src/
+├── app/
+├── modules/
+├── components/
+├── config/
+├── hooks/
+├── providers/
+├── lib/
+├── utils/
+├── constants/
+└── types/
+```
+
+---
+
+## `app/`
+
+The Next.js `app/` directory is primarily responsible for:
+
+- Routes
+- Layouts
+- Route groups
+- Route-level loading states
+- Route-level error boundaries
+- Route-level composition
+
+Business implementation should generally remain inside feature modules.
+
+Example:
+
+```text
+app/
+├── (auth)/
+│   └── login/
+│
+├── (protected)/
+│   ├── admin/
+│   └── feature/
+│
+├── unauthorized/
+├── layout.tsx
+├── loading.tsx
+├── error.tsx
+└── not-found.tsx
+```
+
+---
+
+## `modules/`
+
+Business features belong inside `modules/`.
+
+A typical feature:
+
+```text
+modules/
+└── feature/
+    ├── components/
+    ├── hooks/
+    ├── services/
+    ├── schemas/
+    ├── types/
+    ├── views/
+    └── index.ts
+```
+
+The normal frontend dependency flow is:
+
+```text
+Route
+  │
+  ▼
+View
+  │
+  ▼
+Component
+  │
+  ▼
+Hook
+  │
+  ▼
+Service
+  │
+  ▼
+Backend API
+```
+
+### Components
+
+Contain feature-specific presentation and interaction.
+
+### Hooks
+
+Contain React-specific application logic and TanStack Query queries/mutations.
+
+### Services
+
+Contain communication with backend APIs.
+
+### Views
+
+Compose complete feature screens.
+
+### Schemas
+
+Contain frontend-only runtime schemas when they are not shared API contracts.
+
+### Types
+
+Contain frontend-only TypeScript definitions.
+
+---
+
+# Shared Components
+
+Globally reusable components belong in:
+
+```text
+src/components/
+```
+
+Examples include:
+
+```text
+components/
+├── common/
+│   ├── Modal/
+│   └── Table/
+│
+├── guards/
+│   ├── RoleGuard.tsx
+│   └── PermissionGuard.tsx
+│
+└── ui/
+```
+
+A reusable table may be organized as:
+
+```text
+Table/
+├── index.ts
+├── table.types.ts
+├── RowsPerPageSelector.tsx
+├── Table.tsx
+├── TableBody.tsx
+├── TableEmpty.tsx
+├── TableHeader.tsx
+├── TableLoading.tsx
+└── TablePagination.tsx
+```
+
+---
+
+# Frontend State Management
+
+Different types of state should be handled by the appropriate tool.
+
+## Local UI State
+
+Use React state for local component state:
+
+```ts
+const [isOpen, setIsOpen] = useState(false);
+```
+
+Reusable UI state can be encapsulated in hooks:
+
+```ts
+const modal = useDisclosure();
+```
+
+## Server State
+
+Use TanStack Query for backend/server data.
+
+Examples:
+
+```ts
+useQuery(...)
+useMutation(...)
+```
+
+TanStack Query handles:
+
+- Loading states
+- Caching
+- Invalidations
+- Refetching
+- Mutation state
+- Server-state synchronization
+
+---
+
+# Frontend Mutation Pattern
+
+Feature hooks should primarily manage server-state behavior.
+
+Example:
+
+```ts
+export function useCreateUser() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: createUserService,
+
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ["access-control", "users"],
+            });
+        },
+    });
+}
+```
+
+Page or view handlers can manage UI-specific consequences:
+
+```ts
+async function handleCreateUser(data: CreateUserSchema) {
+    try {
+        await createUser(data);
+
+        userModal.close();
+
+        SweetAlert.successAlert(
+            "Success",
+            "User created successfully."
+        );
+    } catch {
+        SweetAlert.errorAlert(
+            "Failed",
+            "Failed to create user."
+        );
+    }
+}
+```
+
+This keeps server-state responsibilities separate from page-specific presentation behavior.
+
+---
+
+# Backend Architecture
+
+The backend follows a layered, feature-based architecture.
+
+```text
+src/
+├── config/
+├── lib/
+├── modules/
+├── middleware/
+├── socket/
+├── errors/
+├── types/
+├── app.ts
+└── server.ts
+```
+
+Business capabilities belong inside `modules/`.
+
+---
+
+## Backend Module Structure
+
+A typical backend feature:
+
+```text
+modules/
+└── feature/
+    ├── feature.routes.ts
+    ├── feature.controller.ts
+    ├── feature.service.ts
+    ├── feature.repository.ts
+    ├── feature.mapper.ts
+    ├── feature.schema.ts
+    └── feature.types.ts
+```
+
+The normal dependency flow is:
+
+```text
+HTTP Request
+     │
+     ▼
+   Route
+     │
+     ▼
+ Middleware
+     │
+     ▼
+ Controller
+     │
+     ▼
+  Service
+     │
+     ▼
+ Repository
+     │
+     ▼
+   Prisma
+     │
+     ▼
+ PostgreSQL
+```
+
+---
+
+## Routes
+
+Routes define HTTP endpoints and compose middleware.
+
+Routes should not contain business logic.
+
+---
+
+## Controllers
+
+Controllers handle HTTP-specific concerns.
+
+Responsibilities include:
+
+- Reading validated request data
+- Calling services
+- Selecting HTTP status codes
+- Returning responses
+
+Controllers should remain thin.
+
+---
+
+## Services
+
+Services contain business logic.
+
+Responsibilities include:
+
+- Business rules
+- Application orchestration
+- Domain decisions
+- Coordinating repositories
+- Coordinating external services
+
+Services should remain independent from Express whenever practical.
+
+---
+
+## Repositories
+
+Repositories contain persistence logic.
+
+Responsibilities include:
+
+- Prisma queries
+- Database reads
+- Database writes
+- Persistence-specific operations
+
+Repositories should not decide authorization or HTTP behavior.
+
+---
+
+## Mappers
+
+Mappers transform one representation into another.
+
+Example:
+
+```text
+Prisma Model
+    │
+    ▼
+   Mapper
+    │
+    ▼
+API Model
+```
+
+Mappers are useful when persistence models should not be exposed directly through the API.
+
+---
+
+# `app.ts` vs `server.ts`
+
+The Express application separates application configuration from server startup.
+
+## `app.ts`
+
+Responsible for constructing the Express application.
+
+Typical responsibilities:
+
+- Express initialization
+- JSON middleware
+- Cookie parsing
+- CORS
+- Request logging
+- API routes
+- Not-found middleware
+- Error middleware
+
+`app.ts` should not start the network server.
+
+---
+
+## `server.ts`
+
+Responsible for process-level startup.
+
+Typical responsibilities:
+
+- Creating the HTTP server
+- Initializing Socket.IO
+- Starting the server
+- Listening on the configured port
+- Process lifecycle handling
+- Graceful shutdown
+
+This separation makes the application easier to test.
+
+---
+
+# Shared Package
+
+Shared contracts belong in:
+
+```text
+packages/shared/
+```
+
+Example:
+
+```text
+shared/
+└── src/
+    ├── schemas/
+    ├── types/
+    ├── constants/
+    ├── enums/
+    └── index.ts
+```
+
+The package is consumed as:
+
+```ts
+import {
+    User,
+    Role,
+    CreateUserSchema,
+} from "@repo/shared";
+```
+
+---
+
+# What Belongs in `@repo/shared`
+
+Place something in the shared package when it represents a contract or definition required by more than one application.
+
+Good candidates include:
+
+- API request schemas
+- API response types
+- Shared domain types
+- Pagination metadata
+- Role/permission constants
+- Shared enums
+- Shared Zod schemas
+
+Do not automatically place every type into the shared package.
+
+Frontend-only and backend-only implementation details should remain local.
+
+---
+
+# Next.js Shared Package Transpilation
+
+If `@repo/shared` exports TypeScript source directly:
+
+```json
+{
+  "main": "./src/index.ts"
+}
+```
+
+the Next.js application can transpile it through:
+
+```ts
+transpilePackages: ["@repo/shared"]
+```
+
+This allows changes in the shared package to be consumed without requiring a manual package rebuild during development.
+
+If the shared package later becomes independently distributed or significantly larger, it may be changed to produce compiled `dist` output.
+
+---
+
+# Authentication
+
+Authentication answers:
+
+> Who is making the request?
+
+The backend is the authority for authentication.
+
+A typical flow:
+
+```text
+Login Form
+    │
+    ▼
+POST /auth/login
+    │
+    ▼
+Authentication Service
+    │
+    ├── Validate credentials
+    ├── Create token
+    └── Set authentication cookie
+    │
+    ▼
+Frontend
+    │
+    ▼
+GET /auth/me
+    │
+    ▼
+Authenticated User
+```
+
+The frontend maintains authenticated-user state through an authentication provider.
+
+---
+
+# Backend Authentication Flow
+
+```text
+Client Request
+      │
+      ▼
+authenticate.middleware.ts
+      │
+      ├── Read access token from cookie
+      ├── Verify JWT
+      ├── Load authenticated user
+      │       │
+      │       ▼
+      │   auth.service.ts
+      │       │
+      │       ▼
+      │   auth.repository.ts
+      │       │
+      │       ▼
+      │     Prisma
+      │
+      ├── Attach authenticated user to req.user
+      │
+      ▼
+Protected Route
+```
+
+Roles and permissions are loaded as part of the authenticated user when appropriate.
+
+This prevents authorization middleware from repeatedly querying the same user information within one request.
+
+---
+
+# Authenticated User
+
+The frontend should receive only the information required for authentication and authorization.
+
+Example:
+
+```ts
+export type AuthenticatedUser = {
+    id: number;
+    name: string;
+    username: string;
+    email: string;
+    isActive: boolean;
+
+    roles: string[];
+    permissions: string[];
+};
+```
+
+This allows simple authorization checks:
+
+```ts
+user.roles.includes("ADMIN");
+```
+
+and:
+
+```ts
+user.permissions.includes("USER_CREATE");
+```
+
+---
+
+# Authorization
+
+Authentication and authorization are separate concerns.
+
+```text
+Authentication
+      │
+      ▼
+Who is the user?
+      │
+      ▼
+Authorization
+      │
+      ▼
+What is the user allowed to do?
+```
+
+The architecture supports roles and permissions.
+
+---
+
+## Roles
+
+Roles provide broad access grouping.
+
+Examples:
+
+```text
+ADMIN
+USER
+MANAGER
+```
+
+Frontend example:
+
+```tsx
+<RoleGuard roles={["ADMIN"]}>
+    <AdminView />
+</RoleGuard>
+```
+
+Roles are useful for page or module access.
+
+---
+
+## Permissions
+
+Permissions provide granular action-level access.
+
+Examples:
+
+```text
+USER_CREATE
+USER_UPDATE
+USER_DELETE
+
+ROLE_CREATE
+ROLE_UPDATE
+
+PERMISSION_ASSIGN
+```
+
+Frontend example:
+
+```tsx
+<PermissionGuard permissions={["USER_CREATE"]}>
+    <Button>Create User</Button>
+</PermissionGuard>
+```
+
+A missing action permission should normally hide or disable the relevant action rather than deny the entire module when the user otherwise has module access.
+
+---
+
+# Backend Authorization
+
+Frontend guards are not security boundaries.
+
+Users can manually call backend endpoints even when buttons or pages are hidden.
+
+Therefore:
+
+```text
+Frontend Guard
+      │
+      ▼
+User Experience
+      │
+      ▼
+API Request
+      │
+      ▼
+Authentication Middleware
+      │
+      ▼
+Authorization Middleware
+      │
+      ▼
+Controller
+```
+
+The backend must independently verify authorization.
+
+Example:
+
+```ts
+router.post(
+    "/users",
+    authenticate,
+    authorize({
+        roles: ["ADMIN"],
+        permissions: ["USER_CREATE"],
+    }),
+    validate(createUserSchema),
+    createUserController
+);
+```
+
+The backend remains the authoritative security layer.
+
+---
+
+# Frontend Routing and Authorization
+
+The frontend separates authentication, authorization, routing errors, and data states.
+
+```text
+app/
+│
+├── (auth)/
+│   ├── login/
+│   │   └── page.tsx
+│   └── layout.tsx
+│
+├── (protected)/
+│   ├── admin/
+│   ├── feature-1/
+│   ├── feature-2/
+│   └── layout.tsx
+│
+├── unauthorized/
+│   └── page.tsx
+│
+├── layout.tsx
+├── loading.tsx
+├── error.tsx
+└── not-found.tsx
+```
+
+Typical responsibility split:
+
+| Concern | Responsibility |
+|---|---|
+| Authentication state | `AuthProvider` |
+| Current authenticated user | `AuthProvider` |
+| Roles and permissions | `AuthProvider` |
+| Protected route authentication | `(protected)/layout.tsx` |
+| Module authorization | Role guard |
+| UI/action authorization | Permission guard |
+| Unauthorized page | `/unauthorized` |
+| Route loading | `loading.tsx` |
+| Route/runtime errors | `error.tsx` |
+| Missing resources/routes | `not-found.tsx` |
+| API query state | TanStack Query |
+| API authentication | Backend middleware |
+| API authorization | Backend middleware |
+
+---
+
+# Unauthorized vs Not Found vs Error
+
+These states should remain separate.
+
+```text
+401 / Unauthenticated
+        │
+        └── Login
+
+403 / Unauthorized
+        │
+        └── /unauthorized
+
+404 / Not Found
+        │
+        └── not-found.tsx
+
+Unexpected Application Error
+        │
+        └── error.tsx
+```
+
+---
+
+# Validation
+
+Zod provides runtime validation.
+
+Shared API contracts should normally live in:
+
+```text
+packages/shared/src/schemas/
+```
+
+---
+
+## Schema Naming
+
+Runtime schemas use camelCase:
+
+```ts
+export const registerUserSchema = z.object({
+    name: z.string().min(1),
+    username: z.string().min(3),
+    email: z.string().email().optional(),
+    password: z.string().min(8),
+});
+```
+
+Inferred TypeScript types use PascalCase:
+
+```ts
+export type RegisterUserSchema =
+    z.infer<typeof registerUserSchema>;
+```
+
+Therefore:
+
+```text
+registerUserSchema
+       │
+       └── Runtime Zod schema
+
+RegisterUserSchema
+       │
+       └── TypeScript type
+```
+
+Use the runtime schema for validation and composition:
+
+```ts
+registerUserSchema.parse(data);
+
+registerUserSchema.extend({
+    // additional fields
+});
+```
+
+Use the inferred type for TypeScript typing:
+
+```ts
+const data: RegisterUserSchema = {
+    name: "John Doe",
+    username: "john",
+    password: "Password123",
+};
+```
+
+---
+
+# Schema Composition
+
+Reuse common schemas instead of duplicating fields.
+
+Example base registration schema:
+
+```ts
+export const registerUserSchema = z.object({
+    email: z.string().email().optional(),
+    name: z.string().min(1),
+    username: z.string().min(3),
+    password: z.string().min(8),
+});
+```
+
+Administrative creation can extend it:
+
+```ts
+export const createUserSchema =
+    registerUserSchema.extend({
+        roleIds: z
+            .array(z.number().int().positive())
+            .min(1, "At least one role is required"),
+    });
+```
+
+Conceptually:
+
+```text
+registerUserSchema
+    │
+    ├── name
+    ├── username
+    ├── email
+    └── password
+         │
+         │ extend
+         ▼
+createUserSchema
+    │
+    └── roleIds
+```
+
+Public registration should not automatically be allowed to assign privileged roles.
+
+---
+
+# Transport-Independent Shared Schemas
+
+Shared schemas should normally describe data rather than framework-specific request objects.
+
+Prefer:
+
+```ts
+export const updateUserSchema = z.object({
+    name: z.string().min(1).optional(),
+    username: z.string().min(3).optional(),
+    email: z.string().email().optional(),
+    password: z.string().min(8).optional(),
+    roleIds: z.array(z.number().int().positive()).optional(),
+    isActive: z.boolean().optional(),
+});
+```
+
+Avoid putting Express-specific structures such as this inside global shared schemas:
+
+```ts
+z.object({
+    params: z.object({
+        userId: z.coerce.number(),
+    }),
+    body: updateUserSchema,
+});
+```
+
+`body`, `params`, and `query` are transport/framework concerns.
+
+---
+
+# Partial Updates
+
+Update schemas should avoid unintended defaults.
+
+Prefer:
+
+```ts
+isActive: z.boolean().optional()
+```
+
+over:
+
+```ts
+isActive: z.boolean().default(false)
+```
+
+when an omitted field should mean:
+
+> Do not modify the existing value.
+
+---
+
+# API Architecture
+
+A request should move through predictable layers:
+
+```text
+Client
+  │
+  ▼
+Route
+  │
+  ▼
+Authentication
+  │
+  ▼
+Authorization
+  │
+  ▼
+Validation
+  │
+  ▼
+Controller
+  │
+  ▼
+Service
+  │
+  ▼
+Repository
+  │
+  ▼
+Database
+```
+
+Each layer should have a clear responsibility.
+
+---
+
+# Database Architecture
+
+Prisma manages database access and schema migrations.
+
+```text
+apps/api/prisma/
+├── schema.prisma
+├── migrations/
+├── factories/
+└── seeders/
+```
+
+## Schema
+
+`schema.prisma` defines database models and relationships.
+
+## Migrations
+
+Database schema changes are tracked through Prisma migrations.
+
+## Seeders
+
+Seeders create required initial/reference data.
+
+Examples:
+
+```text
+roles
+permissions
+administrative users
+system settings
+```
+
+## Factories
+
+Factories generate reusable development or testing data.
+
+---
+
+# Real-Time Communication
+
+Socket.IO provides real-time communication between frontend and backend.
+
+```text
+Browser
+   │
+   │ Socket.IO
+   ▼
+HTTP Server
+   │
+   ▼
+Socket.IO Server
+   │
+   ▼
+Socket Handlers
+```
+
+Socket initialization belongs at the server/infrastructure level rather than inside individual controllers.
+
+Feature-specific socket behavior can be organized into handlers.
+
+Example:
+
+```text
+src/socket/
+├── index.ts
+├── socket-auth.ts
+└── handlers/
+    └── notification.handler.ts
+```
+
+---
+
+# Error Handling
+
+Errors should be handled centrally whenever possible.
+
+Backend flow:
+
+```text
+Controller / Service
+        │
+        ▼
+      throw
+        │
+        ▼
+Error Handler
+        │
+        ├── Log error
+        ├── Select status code
+        └── Return safe response
+```
+
+Production responses should not expose stack traces or sensitive implementation details.
+
+Example response:
+
+```json
+{
+  "success": false,
+  "code": "INTERNAL_SERVER_ERROR",
+  "message": "Internal server error"
+}
+```
+
+---
+
+# Operational Errors vs Unexpected Errors
+
+Expected operational errors include:
+
+```text
+INVALID_CREDENTIALS
+UNAUTHORIZED
+FORBIDDEN
+VALIDATION_ERROR
+NOT_FOUND
+CONFLICT
+```
+
+These may generally be logged as `warn`.
+
+Unexpected failures should generally use `error`.
+
+Examples:
+
+```text
+Unexpected database failure
+Unhandled exception
+External service failure
+Filesystem failure
+Programming error
+```
+
+---
+
+# Frontend Error Handling
+
+Different frontend errors belong at different layers.
+
+| Situation | Handler |
+|---|---|
+| Route rendering error | `error.tsx` |
+| Missing route/resource | `not-found.tsx` |
+| Unauthorized route | `/unauthorized` |
+| Authentication failure | Authentication flow |
+| Query/mutation error | TanStack Query / UI |
+| Form validation | Zod / form library |
+
+Route loading and API loading are separate concerns.
+
+```text
+loading.tsx
+    │
+    └── Route/segment loading
+
+TanStack Query
+    │
+    └── API query/mutation loading
+```
+
+---
+
+# Logging and Observability
+
+The backend uses structured logging with:
+
+- Pino
+- pino-http
+- pino-pretty
+
+The logging system should help answer:
+
+```text
+What happened?
+When did it happen?
+Which request caused it?
+Which operation was running?
+Which user was involved?
+Where did it fail?
+How long did it take?
+```
+
+---
+
+# Logging Architecture
+
+```text
+Development Bug
+      │
+      ▼
+VS Code / Node Debugger
+
+Runtime Information
+      │
+      ▼
+Pino Structured Logging
+
+Production Incident
+      │
+      ▼
+Pino Logs
+      │
+      ▼
+stdout / Log Collector
+      │
+      ▼
+Centralized Logging
+
+Performance / Memory Problem
+      │
+      ▼
+Node Diagnostics
+```
+
+Logging, debugging, and runtime diagnostics complement each other.
+
+---
+
+# Logging Directory Structure
+
+```text
+apps/api/
+│
+├── logs/
+│   ├── app.log
+│   ├── error.log
+│   └── .gitkeep
+│
+└── src/
+    ├── config/
+    │   └── logger.config.ts
+    │
+    ├── lib/
+    │   └── logger/
+    │       └── logger.ts
+    │
+    └── middleware/
+        ├── request-logger.middleware.ts
+        └── error-handler.middleware.ts
+```
+
+Generated log files should not be committed to source control.
+
+---
+
+# Log Levels
+
+```text
+trace
+debug
+info
+warn
+error
+fatal
+```
+
+Recommended usage:
+
+```text
+debug → developer diagnostic information
+info  → normal operational or business event
+warn  → expected but undesirable condition
+error → unexpected failed operation
+fatal → critical process-level failure
+```
+
+Recommended environment defaults:
+
+```text
+development → debug
+production  → info
+```
+
+---
+
+# Structured Logging
+
+Prefer:
+
+```ts
+logger.info(
+    {
+        userId: user.id,
+        username: user.username,
+    },
+    "User authenticated"
+);
+```
+
+instead of:
+
+```ts
+logger.info(
+    `User ${user.id} ${user.username} authenticated`
+);
+```
+
+Structured logs are easier to:
+
+- Search
+- Filter
+- Aggregate
+- Analyze
+- Send to centralized logging systems
+
+---
+
+# Request Logging
+
+HTTP requests should pass through `pino-http`.
+
+Request logging can provide:
+
+```text
+HTTP method
+URL
+status code
+response time
+request ID
+authenticated user ID
+errors
+```
+
+Example:
+
+```json
+{
+  "method": "POST",
+  "url": "/api/v1/users",
+  "statusCode": 201,
+  "responseTime": 43
+}
+```
+
+---
+
+# Request IDs
+
+Every HTTP request should receive a unique request ID.
+
+Node provides:
+
+```ts
+import { randomUUID } from "node:crypto";
+```
+
+Conceptually:
+
+```text
+Frontend Request
+       │
+       ▼
+   Request ID
+       │
+       ▼
+   Controller
+       │
+       ▼
+    Service
+       │
+       ▼
+   Repository
+       │
+       ▼
+    Database
+```
+
+Logs associated with the request can then be correlated through the same identifier.
+
+---
+
+# Sensitive Logging
+
+Never intentionally log:
+
+- Passwords
+- Password hashes
+- JWT tokens
+- Access tokens
+- Refresh tokens
+- Authorization headers
+- Cookies
+- API secrets
+- Database credentials
+- Password-reset tokens
+- Private keys
+
+Logger redaction should provide additional defense in depth.
+
+Example:
+
+```ts
+redact: {
+    paths: [
+        "req.headers.authorization",
+        "req.headers.cookie",
+        "password",
+        "*.password",
+        "passwordHash",
+        "*.passwordHash",
+        "accessToken",
+        "refreshToken"
+    ],
+    censor: "[REDACTED]"
+}
+```
+
+---
+
+# Production Logging
+
+Production should normally output structured JSON.
+
+```text
+Express API
+     │
+     ▼
+    Pino
+     │
+     ▼
+stdout / stderr
+     │
+     ▼
+Docker / systemd / Cloud Runtime
+     │
+     ▼
+Log Collector
+     │
+     ▼
+Centralized Logging
+```
+
+Possible platforms include:
+
+- Grafana Loki
+- Datadog
+- Elastic
+- AWS CloudWatch
+- Google Cloud Logging
+- Azure Monitor
+- Better Stack
+
+The application should remain as independent from the logging platform as practical.
+
+---
+
+# Development Debugging
+
+Pino should not replace a debugger.
+
+For local application logic debugging use:
+
+```text
+VS Code
+   +
+Node.js Debugger
+   +
+Breakpoints
+```
+
+Use a debugger for problems involving:
+
+```text
+incorrect conditions
+unexpected variable values
+control flow
+async behavior
+incorrect transformations
+business logic bugs
+```
+
+Use logging when you need historical runtime information or when attaching a debugger is impractical.
+
+---
+
+# Performance Logging
+
+Slow operations can be measured.
+
+Example:
+
+```ts
+const start = performance.now();
+
+const users = await userRepository.findAll();
+
+const durationMs =
+    performance.now() - start;
+
+if (durationMs > 500) {
+    logger.warn(
+        {
+            durationMs,
+        },
+        "Slow user query detected"
+    );
+}
+```
+
+This can help identify:
+
+```text
+slow database queries
+slow external APIs
+expensive calculations
+document generation bottlenecks
+serialization costs
+```
+
+---
+
+# CPU Profiling
+
+For excessive CPU usage, Node.js CPU profiling may be used.
+
+Example:
+
+```bash
+node --cpu-prof ./node_modules/tsx/dist/cli.mjs src/server.ts
+```
+
+Use CPU profiling for:
+
+```text
+high CPU usage
+expensive loops
+large transformations
+CPU-intensive serialization
+computational bottlenecks
+```
+
+---
+
+# Memory Investigation
+
+For suspected memory leaks:
+
+```bash
+node --inspect ./node_modules/tsx/dist/cli.mjs src/server.ts
+```
+
+Heap snapshots can help identify:
+
+```text
+retained objects
+growing arrays
+unreleased event listeners
+socket cleanup problems
+cache growth
+timers retaining objects
+```
+
+---
+
+# Node Diagnostic Reports
+
+Node diagnostic reports can help investigate serious runtime failures.
+
+Example:
+
+```bash
+node \
+  --report-on-fatalerror \
+  --report-uncaught-exception \
+  ./node_modules/tsx/dist/cli.mjs \
+  src/server.ts
+```
+
+They can help investigate:
+
+```text
+fatal runtime errors
+process crashes
+uncaught exceptions
+runtime resource information
+```
+
+---
+
+# Graceful Shutdown
+
+The application should gracefully close resources during intentional shutdown.
+
+Example:
+
+```ts
+async function shutdown(signal: string) {
+    logger.info(
+        { signal },
+        "Shutdown signal received"
+    );
+
+    server.close(async () => {
+        logger.info("HTTP server closed");
+
+        await prisma.$disconnect();
+
+        logger.info("Database disconnected");
+
+        process.exit(0);
+    });
+}
+```
+
+Listen for:
+
+```ts
+process.on("SIGTERM", () =>
+    shutdown("SIGTERM")
+);
+
+process.on("SIGINT", () =>
+    shutdown("SIGINT")
+);
+```
+
+---
+
+# Logging Rules
+
+## Rule 1 — Avoid permanent `console.log()`
+
+Avoid:
+
+```ts
+console.log("User created");
+```
+
+Prefer:
+
+```ts
+logger.info(
+    {
+        userId: user.id,
+    },
+    "User created"
+);
+```
+
+Temporary local debugging logs should not remain in committed production code.
+
+## Rule 2 — Never log passwords or tokens
+
+Avoid logging entire request objects that may contain credentials.
+
+## Rule 3 — Log meaningful context
+
+Prefer:
+
+```ts
+logger.error(
+    {
+        err: error,
+        userId,
+        requestId,
+    },
+    "Operation failed"
+);
+```
+
+over:
+
+```ts
+logger.error("Error");
+```
+
+## Rule 4 — Do not over-log
+
+Focus logging on:
+
+```text
+business events
+security events
+unexpected conditions
+external integrations
+slow operations
+errors
+process lifecycle
+```
+
+## Rule 5 — Use the correct severity
+
+```text
+debug → developer diagnostics
+info  → normal events
+warn  → undesirable but expected condition
+error → unexpected failure
+fatal → process-critical failure
+```
+
+## Rule 6 — Prefer request-scoped logging
+
+Inside Express request handlers:
+
+```ts
+req.log.info(...)
+```
+
+Outside the HTTP request lifecycle:
+
+```ts
+logger.info(...)
+```
+
+---
+
+# Testing Strategy
+
+The architecture separates:
+
+```text
+Unit Tests
+Integration Tests
+End-to-End Tests
+```
+
+---
+
+# Unit Tests
+
+Unit tests should generally be colocated with the code they test.
+
+Example:
+
+```text
+auth/
+├── auth.service.ts
+└── auth.service.test.ts
+```
+
+Use:
+
+- Vitest
+- Mocked external dependencies
+
+Unit tests should focus on isolated business logic.
+
+---
+
+# Integration Tests
+
+Backend integration tests belong under:
+
+```text
+apps/api/tests/integration/
+```
+
+Use:
+
+- Vitest
+- Supertest
+- Test database
+
+Integration tests verify interaction between:
+
+```text
+Express
+  ↓
+Service
+  ↓
+Repository
+  ↓
+Test Database
+```
+
+---
+
+# End-to-End Tests
+
+Frontend E2E tests belong under:
+
+```text
+apps/web/tests/e2e/
+```
+
+Use Playwright for critical real-user workflows.
+
+Example:
+
+```text
+Login
+  ↓
+Open Module
+  ↓
+Create Record
+  ↓
+Verify Result
+```
+
+---
+
+# Naming Conventions
+
+Consistency should be maintained across the workspace.
+
+| Resource | Convention | Example |
+|---|---|---|
+| Route folders | kebab-case | `access-control/` |
+| Feature folders | kebab-case | `access-control/` |
+| React components | PascalCase | `UserForm.tsx` |
+| React views | PascalCase | `AccessControlView.tsx` |
+| Hooks | `useSomething` | `useDisclosure.ts` |
+| Services | `domain.service.ts` | `auth.service.ts` |
+| Controllers | `domain.controller.ts` | `auth.controller.ts` |
+| Repositories | `domain.repository.ts` | `auth.repository.ts` |
+| Mappers | `domain.mapper.ts` | `auth.mapper.ts` |
+| Schemas | `domain.schema.ts` | `auth.schema.ts` |
+| Types | `domain.types.ts` | `auth.types.ts` |
+| Middleware | `action.middleware.ts` | `authenticate.middleware.ts` |
+| Configuration | `purpose.config.ts` | `logger.config.ts` |
+| Seeders | `entity.seeder.ts` | `user.seeder.ts` |
+| Factories | `entity.factory.ts` | `user.factory.ts` |
+| Barrel exports | `index.ts` | `index.ts` |
+
+---
+
+# Development Guidelines
+
+## Frontend
+
+Prefer:
+
+```text
+Route
+  ↓
+View
+  ↓
+Component
+  ↓
+Hook
+  ↓
+Service
+```
+
+Avoid placing HTTP/API calls directly inside large UI components.
+
+Keep reusable components independent from specific business modules whenever practical.
+
+---
+
+## Backend
+
+Prefer:
+
+```text
+Route
+  ↓
+Controller
+  ↓
+Service
+  ↓
+Repository
+```
+
+Avoid directly accessing Prisma from controllers for non-trivial business features.
+
+---
+
+## Business Logic
+
+Business rules belong primarily in services.
+
+Database operations belong in repositories.
+
+HTTP concerns belong in controllers.
+
+Validation belongs in schemas and validation middleware.
+
+---
+
+## Shared Contracts
+
+Share contracts when frontend and backend must agree on the same structure.
+
+Do not use `@repo/shared` as a dumping ground for every type in the repository.
+
+---
+
+# Build
+
+Build the frontend:
+
+```bash
+pnpm --filter web build
+```
+
+Build the backend:
+
+```bash
+pnpm --filter api build
+```
+
+Build the complete workspace through the root task:
+
+```bash
+pnpm build
+```
+
+A production build should complete without TypeScript errors.
+
+---
+
+# Production
+
+A general production workflow:
+
+```text
+Source
+  │
+  ▼
+Install Dependencies
+  │
+  ▼
+Type Check
+  │
+  ▼
+Lint
+  │
+  ▼
+Tests
+  │
+  ▼
+Build
+  │
+  ▼
+Database Migration
+  │
+  ▼
+Deploy
+  │
+  ▼
+Start Applications
+```
+
+Frontend and backend may be deployed independently even though they belong to the same monorepo.
+
+---
+
+# Security Principles
+
+The architecture follows several fundamental security rules.
+
+## Backend Is the Security Boundary
+
+Frontend authorization exists primarily for user experience.
+
+Backend authorization provides actual security.
+
+## Never Trust Client Authorization Data
+
+Do not trust client-provided roles or permissions as evidence that an operation is authorized.
+
+## Validate External Input
+
+Requests entering the application should be validated before reaching business logic.
+
+## Protect Secrets
+
+Secrets belong in environment variables.
+
+Never commit:
+
+```text
+.env
+private keys
+production credentials
+access tokens
+database passwords
+```
+
+## Password Storage
+
+Passwords must never be stored as plain text.
+
+Only secure password hashes should be persisted.
+
+## Logging
+
+Sensitive authentication and credential information must never be intentionally logged.
+
+---
+
+# Architectural Principles
+
+## Single Responsibility
+
+Each component, file, module, and layer should have a clear responsibility.
+
+## Separation of Concerns
+
+Routing, UI, server state, business logic, persistence, validation, and infrastructure should remain separated.
+
+## Feature Modularity
+
+Business capabilities should be grouped by feature instead of placing every controller, service, or component into global directories.
+
+## Type Safety
+
+Use TypeScript throughout frontend, backend, and shared packages.
+
+## Runtime Validation
+
+Use Zod at application boundaries where runtime data cannot be trusted.
+
+## Shared Contracts
+
+Share API contracts when multiple applications depend on the same structure.
+
+## Backend Authority
+
+Security and business rules must ultimately be enforced by the backend.
+
+## Testability
+
+Architecture should allow individual layers to be tested independently.
+
+## Observability
+
+Production behavior should be diagnosable through structured logs and request correlation.
+
+## Simplicity
+
+Do not introduce abstraction unless it solves a real problem.
+
+---
+
+# Adding a New Feature
+
+A new frontend feature should generally be created under:
+
+```text
+apps/web/src/modules/<feature>/
+```
+
+Example:
+
+```text
+feature/
+├── components/
+├── hooks/
+├── services/
+├── schemas/
+├── types/
+├── views/
+└── index.ts
+```
+
+A corresponding backend feature should generally be created under:
+
+```text
+apps/api/src/modules/<feature>/
+```
+
+Example:
+
+```text
+feature/
+├── feature.routes.ts
+├── feature.controller.ts
+├── feature.service.ts
+├── feature.repository.ts
+├── feature.mapper.ts
+├── feature.schema.ts
+└── feature.types.ts
+```
+
+Shared contracts can be added under:
+
+```text
+packages/shared/src/
+```
+
+This keeps new business capabilities consistent with the rest of the workspace.
+
+---
+
+# Future Improvements
+
+Potential improvements include:
+
+- [ ] Docker development environment
+- [ ] Docker production images
+- [ ] GitHub Actions CI/CD
+- [ ] Automated linting
+- [ ] Automated type checking
+- [ ] Expanded unit test coverage
+- [ ] Backend integration test suite
+- [ ] Playwright E2E test suite
+- [ ] OpenAPI/API documentation
+- [ ] Rate limiting
+- [ ] Production monitoring
+- [ ] Centralized logging
+- [ ] Health endpoints
+- [ ] Readiness endpoints
+- [ ] Metrics collection
+- [ ] Distributed tracing
+- [ ] Automated dependency updates
+- [ ] Production deployment templates
+
+---
+
+# Using This Architecture for a New Project
+
+This repository is intended to act as a reusable starting point for future applications.
+
+When beginning a new project:
+
+1. Keep the core monorepo structure.
+2. Configure project-specific environment variables.
+3. Define the required Prisma models.
+4. Define shared domain and API contracts.
+5. Add backend feature modules.
+6. Add corresponding frontend feature modules.
+7. Configure roles and permissions.
+8. Create required seed data.
+9. Add tests for critical business rules.
+10. Add project-specific documentation.
+
+The architecture remains stable while the business domain changes.
+
+```text
+Reusable Full-Stack Monorepo
+          │
+          ├── Project A
+          ├── Project B
+          ├── Project C
+          └── Future Applications
+```
+
+---
+
+# License
+
+Add the appropriate license before public distribution.

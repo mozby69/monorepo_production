@@ -1,9 +1,17 @@
 import { Router } from "express";
-import { authenticateToken } from "./auth.middleware";
-import { me, logout } from "./auth.controller";
+import { authenticate } from "../../middleware/authenticate.middleware";
+import { me, logout, loginController, createUserController, getRoleController, getPermissionController, getUsersController, updateRolePermissionsController, updateUserController } from "./auth.controller";
 
 const router = Router();
 
-
+router.post("/login", loginController);
+router.post("/signup", createUserController);
+router.get("/roles", getRoleController)
+router.get("/permissions", getPermissionController)
+router.get("/users", getUsersController)
+router.put("/roles/:id/permissions", updateRolePermissionsController)
+router.put("/users/:id", updateUserController)
+router.get("/me", authenticate, me);
+router.post("/logout", authenticate, logout);
 
 export default router;

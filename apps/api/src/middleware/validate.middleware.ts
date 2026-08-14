@@ -1,14 +1,26 @@
-import { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, RequestHandler, Response } from "express";
+import type { ZodType } from "zod";
 
-export const validate = (req: Request, res: Response, next: NextFunction) => {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-        return res.status(400).json({
-            success: false,
-            message: "Username and password are required"
+export function validate(
+    schema: ZodType
+): RequestHandler {
+    return (req: Request, res: Response, next: NextFunction): void => {
+        const result = schema.safeParse({
+            body: req.body,
+            params: req.params,
+            query: req.query,
         });
-    }
 
-    next();
-};
+        if (!result.success) {
+            res.status(400).json({
+                success: false,
+                message: "Validation failed",
+                errors: result.error.flatten(),
+            });
+
+            return;
+        }
+
+        next();
+    };
+}

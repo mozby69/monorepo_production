@@ -1,0 +1,1 @@
+export { default as AccessControlView } from "./views/AccessControlView";

@@ -2,8 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": [
-      "node"
+      "node",
     ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2020",
