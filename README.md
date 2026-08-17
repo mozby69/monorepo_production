@@ -16,7 +16,7 @@ It establishes consistent conventions for frontend architecture, backend archite
 - [Architecture Overview](#architecture-overview)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
-- [Installation Process](#installation-process)
+- [Development Command Reference](#development=command-reference)
 - [Monorepo Architecture](#monorepo-architecture)
 - [Frontend Architecture](#frontend-architecture)
 - [Backend Architecture](#backend-architecture)
@@ -402,7 +402,7 @@ reference data
 Run the configured user factory command:
 
 ```bash
-pnpm --filter api prisma create:user
+pnpm --filter api create:user
 ```
 
 This command depends on the custom `create:user` command configured by the backend project.
@@ -429,6 +429,16 @@ pnpm --filter api prisma format
 
 ---
 
+## Reset Development Database
+
+Reset the development database and reapply all migrations:
+
+```bash
+pnpm --filter api prisma migrate reset
+```
+
+---
+
 ## Check Migration Status
 
 Check which migrations have been applied:
@@ -437,6 +447,7 @@ Check which migrations have been applied:
 pnpm --filter api prisma migrate status
 ```
 
+Warning: This command deletes all existing data in the development database.
 ---
 
 ## Production Database Migration
@@ -565,16 +576,18 @@ Create a migration:
 pnpm --filter api prisma migrate dev --name "<migration-name>"
 ```
 
-Then seed with preset data
+### Seed Required Data
+
+After applying migrations, seed required/reference data when necessary:
 
 ```bash
 pnpm --filter api prisma db seed
 ```
 
-or test data using factory
+Optionally generate development or test data using a factory:
 
 ```bash
-pnpm --filter api prisma create:user
+pnpm --filter api create:user
 ```
 
 in package.json
