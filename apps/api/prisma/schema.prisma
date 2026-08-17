@@ -80,3 +80,5 @@ model RolePermission {
   @@id([roleId, permissionId])
   @@map("role_permissions")
 }
+
+

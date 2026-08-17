@@ -60,7 +60,7 @@ export function UserForm({
                 username: user.username,
                 email: user.email ?? "",
                 password: "",
-                roleIds: user.roles.map((role) => role.id),
+                roleIds: user.roles.map(Number),
                 isActive: user.isActive,
             });
 
