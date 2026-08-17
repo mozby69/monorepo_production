@@ -8,7 +8,8 @@
     "create:user": "tsx prisma/factories/user.factory.ts",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "prisma": "prisma"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

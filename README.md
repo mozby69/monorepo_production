@@ -16,6 +16,7 @@ It establishes consistent conventions for frontend architecture, backend archite
 - [Architecture Overview](#architecture-overview)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
+- [Installation Process](#installation-process)
 - [Monorepo Architecture](#monorepo-architecture)
 - [Frontend Architecture](#frontend-architecture)
 - [Backend Architecture](#backend-architecture)
@@ -261,6 +262,380 @@ pnpm --version
 git --version
 ```
 
+# Development Command Reference
+
+This section contains the commonly used commands for developing, maintaining, testing, and running this monorepo.
+
+Unless otherwise specified, commands should be executed from the **workspace root folder**.
+
+---
+
+## Install Dependencies
+
+Install all dependencies for the monorepo:
+
+```bash
+pnpm install
+```
+
+Use this after cloning the repository or whenever dependencies in `package.json` or `pnpm-lock.yaml` have changed.
+
+---
+
+## Package Management
+
+### Add Backend Package
+
+Install a package specifically in the `api` workspace:
+
+```bash
+pnpm add --filter api <package-name>
+```
+
+Example:
+
+```bash
+pnpm add --filter api toast
+```
+
+### Add Backend Development Package
+
+```bash
+pnpm add --filter api -D <package-name>
+```
+
+Example:
+
+```bash
+pnpm add --filter api -D vitest
+```
+
+### Remove Backend Package
+
+```bash
+pnpm remove --filter api <package-name>
+```
+
+Example:
+
+```bash
+pnpm remove --filter api toast
+```
+
+### Add Frontend Package
+
+Install a package specifically in the `web` workspace:
+
+```bash
+pnpm add --filter web <package-name>
+```
+
+### Remove Frontend Package
+
+```bash
+pnpm remove --filter web <package-name>
+```
+
+---
+
+# Prisma Commands
+
+Run Prisma commands from the workspace root using the `api` workspace filter.
+
+## Generate Prisma Client
+
+Run after modifying `schema.prisma` or after installing dependencies on a fresh project:
+
+```bash
+pnpm --filter api prisma generate
+```
+
+---
+
+## Create Database Migration
+
+Create and apply a new development migration:
+
+```bash
+pnpm --filter api prisma migrate dev --name "<migration-name>"
+```
+
+Example:
+
+```bash
+pnpm --filter api prisma migrate dev --name "create_user_roles"
+```
+
+Use descriptive migration names such as:
+
+```text
+create_users_table
+add_user_roles
+add_is_active_to_users
+create_permissions_table
+```
+
+---
+
+## Run Database Seeders
+
+Seed the database:
+
+```bash
+pnpm --filter api prisma db seed
+```
+
+Use seeders for initial or required application data such as:
+
+```text
+roles
+permissions
+admin accounts
+system configuration
+reference data
+```
+
+---
+
+## Run Prisma Factory
+
+Run the configured user factory command:
+
+```bash
+pnpm --filter api prisma create:user
+```
+
+This command depends on the custom `create:user` command configured by the backend project.
+
+---
+
+## Validate Prisma Schema
+
+Validate `schema.prisma`:
+
+```bash
+pnpm --filter api prisma validate
+```
+
+---
+
+## Format Prisma Schema
+
+Format `schema.prisma`:
+
+```bash
+pnpm --filter api prisma format
+```
+
+---
+
+## Check Migration Status
+
+Check which migrations have been applied:
+
+```bash
+pnpm --filter api prisma migrate status
+```
+
+---
+
+## Production Database Migration
+
+Apply existing migrations in a production environment:
+
+```bash
+pnpm --filter api prisma migrate deploy
+```
+
+Do not use `prisma migrate dev` for production deployments.
+
+---
+
+# Testing Commands
+
+## Run Backend Unit Tests
+
+```bash
+pnpm --filter api test
+```
+
+---
+
+## Run Vitest Once
+
+Run all Vitest tests once without watch mode:
+
+```bash
+pnpm --filter api vitest:run
+```
+
+---
+
+## Run Test Coverage
+
+Generate backend test coverage:
+
+```bash
+pnpm --filter api test:coverage
+```
+
+Coverage should be reviewed for important application areas such as:
+
+```text
+services
+repositories
+authentication
+authorization
+validation
+business rules
+```
+
+---
+
+# Build Commands
+
+## Build Complete Monorepo
+
+From the workspace root:
+
+```bash
+pnpm build
+```
+
+## Build Backend Only
+
+```bash
+pnpm --filter api build
+```
+
+## Build Frontend Only
+
+```bash
+pnpm --filter web build
+```
+
+---
+
+# Run Development Environment
+
+Run the complete project from the workspace root:
+
+```bash
+pnpm run dev
+```
+
+This starts the development tasks configured for the monorepo.
+
+## Run Backend Only
+
+```bash
+pnpm --filter api dev
+```
+
+## Run Frontend Only
+
+```bash
+pnpm --filter web dev
+```
+
+---
+
+# Common Development Workflows
+
+## First-Time Project Setup
+
+After cloning the repository:
+
+```bash
+pnpm install
+```
+---
+
+## After Changing Prisma Schema
+
+After modifying:
+
+```text
+apps/api/prisma/schema.prisma
+```
+
+Create a migration:
+
+```bash
+pnpm --filter api prisma migrate dev --name "<migration-name>"
+```
+
+Then seed with preset data
+
+```bash
+pnpm --filter api prisma db seed
+```
+
+or test data using factory
+
+```bash
+pnpm --filter api prisma create:user
+```
+
+in package.json
+
+```json
+"scripts": {
+    "create:user": "tsx prisma/factories/user.factory.ts",
+  },
+  ```
+
+Then regenerate Prisma Client if necessary:
+
+```bash
+pnpm --filter api prisma generate
+```
+
+---
+
+## After Pulling Database Changes
+
+If another developer added new migrations:
+
+```bash
+pnpm install
+
+pnpm --filter api prisma generate
+
+pnpm --filter api prisma migrate dev
+```
+
+Then start the project:
+
+```bash
+pnpm run dev
+```
+
+---
+
+## Before Committing Changes
+
+Run tests:
+
+```bash
+pnpm --filter api test
+```
+
+Check test coverage when necessary:
+
+```bash
+pnpm --filter api test:coverage
+```
+
+Build the project:
+
+```bash
+pnpm build
+```
+
+Fix any TypeScript, test, or build errors before committing.
+
+
 ---
 
 ## Install Dependencies
@@ -301,13 +676,13 @@ Never commit production credentials or secrets.
 Generate the Prisma client:
 
 ```bash
-pnpm --filter api exec prisma generate
+pnpm --filter api prisma generate
 ```
 
 Apply development migrations:
 
 ```bash
-pnpm --filter api exec prisma migrate dev
+pnpm --filter api prisma migrate dev
 ```
 
 Seed the database using the configured project seed command.
