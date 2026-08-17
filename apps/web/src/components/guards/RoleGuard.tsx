@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/modules/authentication/hooks/useAuth";
 import { ROUTES } from "@/constants/route.constants";
+import { Role } from "@repo/shared";
+import type { RoleName } from "@repo/shared";
 
 interface RoleGuardProps {
-    roles: string[];
+    roles: RoleName[];
     children: React.ReactNode;
 }
 

@@ -1,13 +1,8 @@
-'use client';
+"use client"
 
-export default function Dashboard(){
+export default function Sample() {
+    return (
+        <div>asdasdasd</div>
 
-    return(
-        <div>
-
-
-
-            <h2>dashboard</h2>
-        </div>
-    );
+    )
 }

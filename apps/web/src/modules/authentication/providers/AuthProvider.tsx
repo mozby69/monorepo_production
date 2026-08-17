@@ -4,7 +4,7 @@ import { useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type { AuthenticatedUser } from "@repo/shared";
+import type { AuthenticatedUser, PermissionName } from "@repo/shared";
 
 import { AuthContext } from "../context/AuthContext";
 import { Authme, LogoutService } from "../services/auth.service";
@@ -91,21 +91,15 @@ export function AuthProvider({
                 return false;
             }
 
-            const normalizedRole = role.toUpperCase();
-
             return user.roles.some(
-                (userRole) =>
-                    userRole.toUpperCase() === normalizedRole
+                (userRole) => userRole.toUpperCase() === role.toUpperCase()
             );
         },
         [user]
     );
-
-    const hasPermission = useCallback(
-        (permission: string) =>
-            user?.permissions.includes(permission) ?? false,
-        [user]
-    );
+    const hasPermission = (permission: PermissionName): boolean => {
+        return user?.permissions.includes(permission) ?? false;
+    };
 
     const value = useMemo(
         () => ({

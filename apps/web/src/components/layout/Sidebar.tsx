@@ -14,7 +14,9 @@ export default function Sidebar() {
         // Role check
         if (
             item.roles &&
-            !item.roles.some((role) => user?.roles.includes(role))
+            !item.roles.some((role) =>
+                user?.roles.includes(role)
+            )
         ) {
             return false;
         }

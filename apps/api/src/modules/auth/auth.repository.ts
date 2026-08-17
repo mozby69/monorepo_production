@@ -11,13 +11,18 @@ const authUserSelect = {
         select: {
             role: {
                 select: {
+                    id: true,
                     name: true,
+                    description: true,
 
                     permissions: {
                         select: {
                             permission: {
                                 select: {
+                                    id: true,
                                     code: true,
+                                    name: true,
+                                    description: true,
                                 },
                             },
                         },

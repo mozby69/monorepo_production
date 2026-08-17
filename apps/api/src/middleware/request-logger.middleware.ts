@@ -4,6 +4,7 @@ import type { Request } from "express";
 
 export const requestLogger = pinoHttp({
     logger,
+    autoLogging: false,
 
     customProps: (req) => {
         const expressReq = req as Request;
