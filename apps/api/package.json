@@ -9,7 +9,9 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "prisma": "prisma"
+    "prisma": "prisma",
+    "migrate": "prisma migrate dev",
+    "generate": "prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

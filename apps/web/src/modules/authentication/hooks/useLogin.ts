@@ -9,17 +9,10 @@ export const useLogin = () => {
     return useMutation({
         mutationFn: (params: LoginSchema) => loginService(params),
 
-        onSuccess: (LoginResponse) => {
-            const user = LoginResponse.data;
+        onSuccess: (response) => {
+            const user = response.data;
 
-            login({
-                ...user,
-                roles: user.roles.map((role) => role.name),
-                permissions: user.permissions.map(
-                    (permission) => permission.code
-                ),
-            });
+            login(user);
         },
-
     });
 };

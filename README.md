@@ -17,6 +17,7 @@ It establishes consistent conventions for frontend architecture, backend archite
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
 - [Development Command Reference](#development=command-reference)
+- [Development Command Reference](#development=command-reference)
 - [Monorepo Architecture](#monorepo-architecture)
 - [Frontend Architecture](#frontend-architecture)
 - [Backend Architecture](#backend-architecture)

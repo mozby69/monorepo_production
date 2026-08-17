@@ -6,8 +6,8 @@ export interface User {
     email: string;
     username: string;
     isActive: boolean;
-    roles: Role[];
-    permissions: Permission[];
+    roles: string[];
+    permissions: string[];
 }
 
 export interface LoginResponse {
