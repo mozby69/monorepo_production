@@ -61,10 +61,7 @@ export function UserTable({
         {
             key: "roles",
             header: "Roles",
-            render: (user) =>
-                user.roles
-                    .map((role) => role.name)
-                    .join(", "),
+            render: (user) => user.roles.join(", "),
         },
         {
             key: "status",

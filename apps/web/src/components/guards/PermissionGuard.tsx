@@ -1,9 +1,10 @@
 "use client";
 
 import { useAuth } from "@/modules/authentication/hooks/useAuth";
+import { PermissionName } from "@repo/shared";
 
 interface PermissionGuardProps {
-    permissions: string[];
+    permissions: PermissionName[];
     requireAll?: boolean;
     children: React.ReactNode;
     fallback?: React.ReactNode;

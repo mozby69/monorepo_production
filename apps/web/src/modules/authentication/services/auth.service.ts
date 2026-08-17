@@ -8,8 +8,8 @@ import { ApiResponse, AuthenticatedUser, LoginSchema, User } from "@repo/shared"
 // LOGIN
 export const loginService = async (
     params: LoginSchema
-): Promise<ApiResponse<User>> => {
-    const res = await api.post<ApiResponse<User>>("/auth/login", params, {
+): Promise<ApiResponse<AuthenticatedUser>> => {
+    const res = await api.post<ApiResponse<AuthenticatedUser>>("/auth/login", params, {
         withCredentials: true
     });
 

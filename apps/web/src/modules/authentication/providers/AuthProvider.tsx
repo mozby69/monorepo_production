@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type { AuthenticatedUser } from "@repo/shared";
+import type { AuthenticatedUser, PermissionName } from "@repo/shared";
 
 import { AuthContext } from "../context/AuthContext";
 import { Authme, LogoutService } from "../services/auth.service";
+
+const AUTH_USER_QUERY_KEY = ["auth", "me"] as const;
 
 export function AuthProvider({
     children,
@@ -14,45 +17,57 @@ export function AuthProvider({
     children: React.ReactNode;
 }) {
     const router = useRouter();
+    const queryClient = useQueryClient();
 
-    const [user, setUser] = useState<AuthenticatedUser | null>(null);
-    const [isAuthReady, setIsAuthReady] = useState(false);
+    const {
+        data: user = null,
+        isPending,
+        refetch,
+    } = useQuery({
+        queryKey: AUTH_USER_QUERY_KEY,
+        queryFn: async (): Promise<AuthenticatedUser | null> => {
+            try {
+                const response = await Authme();
+                return response.data;
+            } catch {
+                return null;
+            }
+        },
+        retry: false,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const isAuthenticated = !!user;
+    const isAuthenticated = user !== null;
+    const isAuthReady = !isPending;
 
     const refreshUser = useCallback(async () => {
-        try {
-            const response = await Authme();
-
-            setUser(response.data);
-        } catch {
-            setUser(null);
-        } finally {
-            setIsAuthReady(true);
-        }
-    }, []);
-
-    useEffect(() => {
-        refreshUser();
-    }, [refreshUser]);
+        await refetch();
+    }, [refetch]);
 
     const login = useCallback(
-        (user: AuthenticatedUser) => {
-            setUser(user);
-            setIsAuthReady(true);
-
-            const isAdmin = user.roles.some(
-                (role) => role.toUpperCase() === "ADMIN"
+        (authenticatedUser: AuthenticatedUser) => {
+            queryClient.setQueryData(
+                AUTH_USER_QUERY_KEY,
+                authenticatedUser
             );
 
-            if (isAdmin) {
+            const roles = authenticatedUser.roles.map((role) =>
+                role.toUpperCase()
+            );
+
+            if (roles.includes("ADMIN")) {
                 router.replace("/admin/access-control");
+                return;
+            }
+
+            if (roles.includes("BRANCH")) {
+                router.replace("/branch/dashboard");
                 return;
             }
 
             router.replace("/");
         },
-        [router]
+        [queryClient, router]
     );
 
     const logout = useCallback(async () => {
@@ -61,26 +76,30 @@ export function AuthProvider({
         } catch (error) {
             console.error(error);
         } finally {
-            setUser(null);
-            setIsAuthReady(true);
+            queryClient.setQueryData(
+                AUTH_USER_QUERY_KEY,
+                null
+            );
+
             router.replace("/login");
         }
-    }, [router]);
+    }, [queryClient, router]);
 
     const hasRole = useCallback(
-        (role: string) =>
-            user?.roles.some(
-                (userRole) =>
-                    userRole.toUpperCase() === role.toUpperCase()
-            ) ?? false,
-        [user]
-    );
+        (role: string) => {
+            if (!user) {
+                return false;
+            }
 
-    const hasPermission = useCallback(
-        (permission: string) =>
-            user?.permissions.includes(permission) ?? false,
+            return user.roles.some(
+                (userRole) => userRole.toUpperCase() === role.toUpperCase()
+            );
+        },
         [user]
     );
+    const hasPermission = (permission: PermissionName): boolean => {
+        return user?.permissions.includes(permission) ?? false;
+    };
 
     const value = useMemo(
         () => ({

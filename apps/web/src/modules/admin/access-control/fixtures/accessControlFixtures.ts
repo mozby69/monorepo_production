@@ -18,6 +18,7 @@ export const accessControlFixture = {
                     name: "ADMIN",
                 },
             ],
+
         },
         {
             id: 2,

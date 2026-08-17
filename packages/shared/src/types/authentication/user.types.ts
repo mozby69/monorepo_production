@@ -6,8 +6,8 @@ export interface User {
     email: string;
     username: string;
     isActive: boolean;
-    roles: string[];
-    permissions: string[];
+    roles: Role[];
+    permissions: Permission[];
 }
 
 export interface LoginResponse {
@@ -23,3 +23,6 @@ export type AuthenticatedUser = {
     roles: string[];
     permissions: string[];
 };
+
+export type RoleName = Role["name"];
+export type PermissionName = Permission["name"];
