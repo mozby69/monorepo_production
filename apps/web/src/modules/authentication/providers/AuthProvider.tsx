@@ -85,21 +85,26 @@ export function AuthProvider({
         }
     }, [queryClient, router]);
 
-    const hasRole = useCallback(
-        (role: string) => {
-            if (!user) {
-                return false;
-            }
+  const hasRole = useCallback(
+    (role: string) => {
+        if (!user) {
+            return false;
+        }
 
-            return user.roles.some(
-                (userRole) => userRole.toUpperCase() === role.toUpperCase()
-            );
-        },
-        [user]
-    );
-    const hasPermission = (permission: PermissionName): boolean => {
+        return user.roles.some(
+            (userRole) =>
+                userRole.toUpperCase() === role.toUpperCase()
+        );
+    },
+    [user]
+);
+
+const hasPermission = useCallback(
+    (permission: PermissionName): boolean => {
         return user?.permissions.includes(permission) ?? false;
-    };
+    },
+    [user]
+);
 
     const value = useMemo(
         () => ({
