@@ -25,6 +25,7 @@ import { CreateRoleSchema, CreateUserSchema, Role, UpdateRoleSchema, UpdateUserS
 import { useDebounce } from "@/hooks/useDebaounce";
 import { accessControlFixture } from "../fixtures/accessControlFixtures";
 import { Button } from "@/components/ui/button";
+import { success } from "zod";
 
 export default function AccessControlView() {
 
@@ -175,6 +176,8 @@ export default function AccessControlView() {
                 "Success",
                 "User created successfully."
             );
+
+            AppToast.success("asdasd")
         } catch (error) {
             SweetAlert.errorAlert(
                 "Failed",
@@ -233,6 +236,8 @@ export default function AccessControlView() {
 
         return () => clearTimeout(timer);
     }, [isLoading]);
+
+    console.log('main page', usersQuery.data)
 
     return (
         <>

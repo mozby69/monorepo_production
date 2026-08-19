@@ -34,7 +34,9 @@ export async function getUsersController(
                     : undefined,
         });
 
-        sendSuccess(res, result.data);
+        sendSuccess(res, result.data, {
+            pagination: result.pagination,
+        });
     } catch (error) {
         next(error);
     }

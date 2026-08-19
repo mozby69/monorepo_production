@@ -6,10 +6,7 @@ export async function getDashboardService(): Promise<
     ApiResponse<DashboardData>
 > {
     const res = await api.get<ApiResponse<DashboardData>>(
-        "/admin/dashboard",
-        {
-            withCredentials: true,
-        }
+        "/admin/dashboard"
     );
 
     return res.data;

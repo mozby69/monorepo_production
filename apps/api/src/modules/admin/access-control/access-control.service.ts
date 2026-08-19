@@ -2,27 +2,10 @@
 
 import { AppError } from "@/errors/app-error";
 import { ErrorCodes } from "@/errors/error-codes";
-
 import { hashPassword } from "../../auth/internal/password.service";
-
 import * as accessControlRepository from "./access-control.repository";
-
-import {
-    mapRole,
-    mapUser,
-} from "./access-control.mapper";
-
-import type {
-    CreateUserSchema,
-    UpdateUserSchema,
-    UpdateRolePermissionsSchema,
-} from "@repo/shared";
-
-import type {
-    CreateRoleInput,
-    UpdateRoleInput,
-} from "./access-control.types";
-
+import { mapRole, mapUser } from "./access-control.mapper";
+import type { CreateUserSchema, UpdateUserSchema, UpdateRolePermissionsSchema, CreateRoleSchema, UpdateRoleSchema } from "@repo/shared";
 
 /* =====================
    USERS
@@ -148,7 +131,7 @@ export async function getRoles() {
 
 
 export async function createRole(
-    params: CreateRoleInput
+    params: CreateRoleSchema
 ) {
     return accessControlRepository.createRole(
         params
@@ -158,7 +141,7 @@ export async function createRole(
 
 export async function updateRole(
     roleId: number,
-    params: UpdateRoleInput
+    params: UpdateRoleSchema
 ) {
     const role =
         await accessControlRepository.findRoleById(

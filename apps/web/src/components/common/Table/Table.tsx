@@ -36,6 +36,8 @@ export function Table<T>({
     pagination,
     onPageChange,
 }: TableProps<T>) {
+
+    console.log('table pagination', pagination)
     return (
         <div className="space-y-4 bg-white">
             <TableHeader

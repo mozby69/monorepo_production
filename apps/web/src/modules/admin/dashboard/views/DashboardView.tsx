@@ -1,18 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-
 import { Skeleton } from "boneyard-js/react";
 import "@/bones/registry";
 
 import { DashboardContent } from "../components/DashboardContent";
 import { useDashboard } from "../hooks/useDashboard";
-
-const dashboardFixtureData = {
-    totalUsers: 0,
-    activeUsers: 0,
-    totalRoles: 0,
-    totalPermissions: 0,
-};
+import { dashboardFixtureData } from "../fixtures/dashboardFixtures";
 
 export default function DashboardView() {
     const { data, isLoading: dashboardLoading } = useDashboard();

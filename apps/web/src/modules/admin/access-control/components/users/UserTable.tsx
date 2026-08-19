@@ -42,6 +42,8 @@ export function UserTable({
     pagination,
     onPageChange,
 }: UserTableProps) {
+
+    console.log('user table', pagination)
     const columns: TableColumn<User>[] = [
         {
             key: "name",

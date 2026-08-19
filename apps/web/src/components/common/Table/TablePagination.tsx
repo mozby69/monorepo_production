@@ -10,9 +10,9 @@ export function TablePagination({
 
     const { page, totalPages } = pagination;
 
-    if (totalPages <= 1) {
-        return null;
-    }
+    // if (totalPages <= 1) {
+    //     return null;
+    // }
 
     const canGoPrevious = page > 1;
     const canGoNext = page < totalPages;

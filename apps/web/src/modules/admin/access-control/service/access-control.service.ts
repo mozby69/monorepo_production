@@ -28,11 +28,10 @@ export const getUsersService = async (param: Params): Promise<
         "/admin/access-control/users",
         {
             params: param,
-            withCredentials: true,
         }
     );
 
-    // console.log('data', res)
+    console.log('services', res)
 
     return res.data;
 };
@@ -42,10 +41,7 @@ export const createUserService = async (
 ): Promise<ApiResponse<User>> => {
     const res = await api.post<ApiResponse<User>>(
         "/admin/access-control/users",
-        params,
-        {
-            withCredentials: true,
-        }
+        params
     );
 
     return res.data;
@@ -57,10 +53,7 @@ export const updateUserService = async (
 ): Promise<ApiResponse<User>> => {
     const res = await api.patch<ApiResponse<User>>(
         `/admin/access-control/users/${userId}`,
-        params,
-        {
-            withCredentials: true,
-        }
+        params
     );
 
     return res.data;
@@ -71,10 +64,7 @@ export const getRolesService = async (): Promise<
     ApiResponse<Role[]>
 > => {
     const res = await api.get<ApiResponse<Role[]>>(
-        "/admin/access-control/roles",
-        {
-            withCredentials: true,
-        }
+        "/admin/access-control/roles"
     );
 
     return res.data;
@@ -86,9 +76,6 @@ export const createRoleService = async (
     const res = await api.post<ApiResponse<Role>>(
         "/admin/access-control/roles",
         params,
-        {
-            withCredentials: true,
-        }
     );
 
     return res.data;
@@ -101,9 +88,6 @@ export const updateRoleService = async (
     const res = await api.patch<ApiResponse<Role>>(
         `/admin/access-control/roles/${roleId}`,
         params,
-        {
-            withCredentials: true,
-        }
     );
 
     return res.data;
@@ -115,9 +99,6 @@ export const getPermissionsService = async (): Promise<
 > => {
     const res = await api.get<ApiResponse<Permission[]>>(
         "/admin/access-control/permissions",
-        {
-            withCredentials: true,
-        }
     );
 
     return res.data;
@@ -130,9 +111,6 @@ export const updateRolePermissionsService = async (
     const res = await api.put<ApiResponse<Role>>(
         `/admin/access-control/roles/${roleId}/permissions`,
         params,
-        {
-            withCredentials: true,
-        }
     );
 
     return res.data;
