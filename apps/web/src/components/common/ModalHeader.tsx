@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 
-type ModalSize = "sm" | "md" | "lg" | "xl";
+type ModalSize = "sm" | "md" | "lg" | "xl" | "xxl";
 
 type ModalProps = {
     isOpen: boolean;
@@ -19,6 +19,7 @@ const sizeClasses: Record<ModalSize, string> = {
     md: "max-w-lg",
     lg: "max-w-3xl",
     xl: "max-w-5xl",
+    xxl: "max-w-7xl",
 };
 
 export default function Modal({
@@ -127,7 +128,7 @@ export default function Modal({
                     </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto px-6">
                     {children}
                 </div>
 

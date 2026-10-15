@@ -109,14 +109,14 @@ export default function PensionerList() {
   const [openMenu, setOpenMenu] = useState<number | null>(null);
   const userModal = useDisclosure();
 
-     const openModal = () => {
-        userModal.open();
+  const openModal = () => {
+    userModal.open();
 
-    }
+  }
 
-    const closeModal = () => {
-        userModal.close();
-    }
+  const closeModal = () => {
+    userModal.close();
+  }
 
 
 
@@ -176,7 +176,7 @@ export default function PensionerList() {
         </div>
 
         <button
-           onClick={openModal}
+          onClick={openModal}
           type="button"
           className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#26342F] px-4 text-[12px] font-medium text-white transition-colors hover:bg-[#374B40]"
         >
@@ -448,12 +448,12 @@ export default function PensionerList() {
 
 
 
-               <Modal onClose={closeModal} isOpen={userModal.isOpen} title={"Add Pensioner "} size="lg">
-                <div>
-                    <AddPensionerModal />
-       
-                </div>
-            </Modal>
+      <Modal onClose={closeModal} isOpen={userModal.isOpen} title={"Add Pensioner "} size="lg">
+        <div>
+          <AddPensionerModal />
+
+        </div>
+      </Modal>
 
 
 
