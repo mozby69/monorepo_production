@@ -30,29 +30,29 @@ export const navigation: NavigationItem[] = [
         icon: Users,
         roles: ["USER"],
     },
-     {
+    {
         title: "Dashboard",
         href: ROUTES.SSP.DASHBOARD, // temporary
         icon: LayoutDashboard,
-        roles: ["BRANCH","ADMIN"],
+        roles: ["BRANCH"],
     },
     {
         title: "Pensioner List",
         href: ROUTES.SSP.PENSIONER, // temporary
         icon: Users,
-        roles: ["BRANCH","ADMIN"],
+        roles: ["BRANCH", "ADMIN"],
     },
     {
         title: "Computation Slip",
         href: ROUTES.SSP.COMPUTATION_SLIP, // temporary
         icon: BookText,
-        roles: ["BRANCH","ADMIN"],
+        roles: ["BRANCH", "ADMIN"],
     },
-     {
+    {
         title: "Collection",
         href: ROUTES.SSP.COLLECTION, // temporary
         icon: Library,
-        roles: ["BRANCH","ADMIN"],
+        roles: ["BRANCH", "ADMIN"],
     },
     {
         title: "Settings",
