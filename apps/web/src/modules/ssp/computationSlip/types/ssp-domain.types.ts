@@ -45,6 +45,7 @@ export interface PensionLoanInfo {
     pensionAmount: Money;
     monthlyInstallment: Money;
     changeAmount: Money;
+    availableChangeAmount: Money;
 
     withdrawAll: boolean;
     collectionDay: number;
@@ -61,6 +62,10 @@ export interface LoanAccount {
     id: number;
     clientId: number;
 
+    pensionLoanInfoId: number;
+
+    installment: Money;
+
     accountNo: string;
     availmentDate: DateString;
 
@@ -68,6 +73,8 @@ export interface LoanAccount {
     yearEffectivity: number;
 
     terms: number;
+
+    changeAmount: Money;
 
     udiAmount: Money;
     principalAmount: Money;

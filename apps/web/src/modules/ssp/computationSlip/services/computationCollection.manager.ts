@@ -1,89 +1,219 @@
-import type {
-    LoanAccount,
-    LoanCollection,
-} from "../types/ssp-domain.types";
 
-export interface LoanCollectionContext {
+import {
+    getPeriodIndex,
+} from "./computationEffectivity.manager";
+
+// =====================================================
+// TYPES
+// =====================================================
+
+export interface LoanCollection {
+    id: number;
+    loanId: number;
+    collectionDate: string;
+    monthEffectivity: number;
+    yearEffectivity: number;
+    amount: number;
+    posted: boolean;
+    collectionStatus: string;
+}
+
+export interface CollectionAnalysis {
+    settledPeriodIndexes: Set<number>;
+    actualPaidTerms: number;
+    totalCollected: number;
+}
+
+interface LoanAccountForCollection {
+    id: number;
+    monthEffectivity: number;
+    yearEffectivity: number;
+    terms: number;
+}
+
+interface CollectionRecord {
+    loanId: number;
+    monthEffectivity: number;
+    yearEffectivity: number;
+    collectionDate: string;
+    amount: number;
+    posted: boolean;
+    collectionStatus: string;
+}
+
+interface CollectionManagerResult {
     paidTerms: number;
-    remainingTerms: number;
     nextCollectionDate: string | null;
-    postedCollections: LoanCollection[];
 }
 
-function getPeriodIndex(
-    year: number,
-    month: number
-): number {
-    return year * 12 + month - 1;
-}
+// =====================================================
+// HELPERS
+// =====================================================
 
-function periodToDate(
-    period: number
-): string {
+function formatPeriodDate(period: number): string {
     const year = Math.floor(period / 12);
     const month = (period % 12) + 1;
 
-    return (
-        `${year}-` +
-        `${String(month).padStart(2, "0")}-01`
-    );
+    return `${year}-${String(month).padStart(2, "0")}-01`;
 }
 
-export function computationCollectionManager(
-    loan: LoanAccount,
-    collections: LoanCollection[]
-): LoanCollectionContext {
-    const loanCollections = collections.filter(
-        (collection) =>
-            collection.loanId === loan.id &&
-            collection.posted &&
-            collection.collectionStatus === "POSTED"
-    );
+// =====================================================
+// ANALYZE ACTUAL COLLECTIONS
+// =====================================================
 
-    const startPeriod = getPeriodIndex(
-        loan.yearEffectivity,
-        loan.monthEffectivity
-    );
+export function analyzeLoanCollections(
+    loanId: number,
+    installment: number,
+    collections: LoanCollection[],
+    asOfDate: string,
+    loan?: Pick<
+        LoanAccountForCollection,
+        "monthEffectivity" | "yearEffectivity" | "terms"
+    >
+): CollectionAnalysis {
+    if (installment <= 0) {
+        throw new Error(
+            "Installment must be greater than zero."
+        );
+    }
 
-    const paidPeriods = new Set<number>();
+    const totals = new Map<number, number>();
 
-    for (const collection of loanCollections) {
+    const startPeriod = loan
+        ? getPeriodIndex(
+            loan.yearEffectivity,
+            loan.monthEffectivity
+        )
+        : null;
+
+    const endPeriod =
+        startPeriod !== null && loan
+            ? startPeriod + loan.terms
+            : null;
+
+    for (const collection of collections) {
+        if (
+            collection.loanId !== loanId ||
+            !collection.posted ||
+            collection.collectionStatus !== "POSTED" ||
+            collection.collectionDate > asOfDate
+        ) {
+            continue;
+        }
+
         const period = getPeriodIndex(
             collection.yearEffectivity,
             collection.monthEffectivity
         );
 
+        // Exclude pre-effectivity and out-of-term periods
+        // when the loan schedule is provided.
         if (
-            period >= startPeriod &&
-            period < startPeriod + loan.terms
+            startPeriod !== null &&
+            endPeriod !== null &&
+            (period < startPeriod || period >= endPeriod)
         ) {
-            paidPeriods.add(period);
+            continue;
+        }
+
+        totals.set(
+            period,
+            (totals.get(period) ?? 0) +
+            Number(collection.amount)
+        );
+    }
+
+    const settledPeriodIndexes = new Set<number>();
+
+    for (const [period, amount] of totals) {
+        if (amount >= installment) {
+            settledPeriodIndexes.add(period);
         }
     }
 
-    let paidTerms = 0;
+    return {
+        settledPeriodIndexes,
+        actualPaidTerms: settledPeriodIndexes.size,
+        totalCollected: [...totals.values()].reduce(
+            (sum, amount) => sum + amount,
+            0
+        ),
+    };
+}
 
-    while (
-        paidTerms < loan.terms &&
-        paidPeriods.has(startPeriod + paidTerms)
-    ) {
-        paidTerms++;
-    }
+// =====================================================
+// COLLECTION MANAGER
+// =====================================================
 
-    const remainingTerms = Math.max(
-        0,
-        loan.terms - paidTerms
+export function computationCollectionManager(
+    loan: LoanAccountForCollection,
+    collections: CollectionRecord[],
+    installment = 0,
+    asOfDate = "9999-12-31"
+): CollectionManagerResult {
+    const startPeriod = getPeriodIndex(
+        loan.yearEffectivity,
+        loan.monthEffectivity
     );
 
-    const nextCollectionDate =
-        paidTerms < loan.terms
-            ? periodToDate(startPeriod + paidTerms)
-            : null;
+    const amountsByPeriod = new Map<number, number>();
+
+    for (const collection of collections) {
+        if (
+            collection.loanId !== loan.id ||
+            !collection.posted ||
+            collection.collectionStatus !== "POSTED" ||
+            collection.collectionDate > asOfDate
+        ) {
+            continue;
+        }
+
+        const period = getPeriodIndex(
+            collection.yearEffectivity,
+            collection.monthEffectivity
+        );
+
+        // Do not count collections outside loan terms.
+        if (
+            period < startPeriod ||
+            period >= startPeriod + loan.terms
+        ) {
+            continue;
+        }
+
+        amountsByPeriod.set(
+            period,
+            (amountsByPeriod.get(period) ?? 0) +
+            Number(collection.amount)
+        );
+    }
+
+    const settledPeriods = new Set<number>();
+
+    for (const [period, amount] of amountsByPeriod) {
+        if (
+            installment > 0 &&
+            amount >= installment
+        ) {
+            settledPeriods.add(period);
+        }
+    }
+
+    let nextCollectionDate: string | null = null;
+
+    for (let index = 0; index < loan.terms; index++) {
+        const period = startPeriod + index;
+
+        if (settledPeriods.has(period)) {
+            continue;
+        }
+
+        nextCollectionDate = formatPeriodDate(period);
+        break;
+    }
 
     return {
-        paidTerms,
-        remainingTerms,
+        paidTerms: settledPeriods.size,
         nextCollectionDate,
-        postedCollections: loanCollections,
     };
 }

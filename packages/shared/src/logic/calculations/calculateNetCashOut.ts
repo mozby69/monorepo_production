@@ -45,19 +45,15 @@ export function calculateNetCashOut({
     /**
      * CHANGE
      */
-    if (
-        transactionType ===
-        TRANSACTION_TYPES.change
-    ) {
-        grossCashout =
-            changeAmount;
+    if (transactionType === TRANSACTION_TYPES.change) {
 
-        netCashOut =
-            changeAmount -
-            processingFee;
+        grossCashout = changeAmount;
 
-        totalCashOut =
-            netCashOut;
+        // Only the current processing fee
+        netCashOut = grossCashout - processingFee;
+
+        // Previous outstanding fees are handled in computationManager
+        totalCashOut = netCashOut - supplementaryCharge;
 
         return {
             grossCashout:

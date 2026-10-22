@@ -12,6 +12,10 @@ export * from "./calculations/calculateRenewalBalance";
 export * from "./calculations/calculateSLToDeductCharge";
 export * from "./calculations/applySupplementaryPayment";
 
+export * from "./calculations/calculateChargePayment";
+export * from "./calculations/calculateSelectedDeductions";
+export * from "./calculations/calculatePreviousFeePayments";
+
 export * from "./rules/getLoanEffectivityDate";
 export * from "./rules/getMaximumSLTerm";
 // export * from "./rules/getMaximumTerm";

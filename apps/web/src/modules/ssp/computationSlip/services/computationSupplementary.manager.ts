@@ -4,13 +4,9 @@ import type {
 } from "../types/ssp-supplementary.types";
 
 export interface SupplementaryContext {
-    activeSupplementaryLoan:
-    SupplementaryLoanAccount | null;
-
+    activeSupplementaryLoan: SupplementaryLoanAccount | null;
     supplementaryBalance: number;
-
     unpaidCharges: SupplementaryLoanCharge[];
-
     totalUnpaidCharges: number;
 }
 
@@ -23,44 +19,46 @@ export function computationSupplementaryManager(
         (loan) => loan.clientId === clientId
     );
 
-    if (clientLoans.length > 1) {
+    const activeLoans = clientLoans.filter(
+        (loan) => loan.status === "ACTIVE"
+    );
+
+    if (activeLoans.length > 1) {
         throw new Error(
-            "Multiple supplementary accounts found. " +
-            "An account-selection rule is required."
+            "Multiple active SL records found."
         );
     }
 
-    const activeSupplementaryLoan =
-        clientLoans[0] ?? null;
+    const activeSupplementaryLoan = activeLoans[0] ?? null;
 
-    if (!activeSupplementaryLoan) {
-        return {
-            activeSupplementaryLoan: null,
-            supplementaryBalance: 0,
-            unpaidCharges: [],
-            totalUnpaidCharges: 0,
-        };
-    }
-
-    const unpaidCharges = charges.filter(
-        (charge) =>
-            charge.slId === activeSupplementaryLoan.id &&
-            charge.status === "UNPAID"
+    const clientSlIds = new Set(
+        clientLoans.map((loan) => loan.id)
     );
 
-    const totalUnpaidCharges = unpaidCharges.reduce(
-        (total, charge) =>
-            total + charge.interestAmount,
-        0
-    );
+    const unpaidCharges = charges
+        .filter(
+            (charge) =>
+                clientSlIds.has(charge.slId) &&
+                charge.status === "UNPAID"
+        )
+        .sort(
+            (a, b) =>
+                a.dueDate.localeCompare(b.dueDate) ||
+                a.id - b.id
+        );
 
     return {
         activeSupplementaryLoan,
 
         supplementaryBalance:
-            activeSupplementaryLoan.balanceAmount,
+            activeSupplementaryLoan?.balanceAmount ?? 0,
 
         unpaidCharges,
-        totalUnpaidCharges,
+
+        totalUnpaidCharges: unpaidCharges.reduce(
+            (sum, charge) =>
+                sum + charge.interestAmount,
+            0
+        ),
     };
 }

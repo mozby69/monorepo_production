@@ -9,9 +9,9 @@ import {
     ArrowUpRight,
 } from "lucide-react";
 
-import type {
-    ComputationManagerResult,
-} from "../../services/computation.manager";
+import { cn } from "@/utils/cn";
+
+import type { ComputationManagerResult } from "../../services/computation.manager";
 
 type ComputationSummaryProps = {
     result: ComputationManagerResult | null;
@@ -28,30 +28,36 @@ const currency = (value: number | null | undefined) => {
     }).format(value ?? 0);
 };
 
+
 function SummaryRow({
     label,
     value,
     negative = false,
     highlight = false,
+    className,
 }: {
     label: string;
     value: number;
     negative?: boolean;
     highlight?: boolean;
+    className?: string;
 }) {
     return (
-        <div className="flex items-center justify-between gap-4 py-2.5">
-            <span className="text-sm text-slate-500">
+        <div className="flex items-center justify-between gap-4 py-2">
+            <span className={cn(`text-sm text-slate-500`, className)}>
                 {label}
             </span>
 
             <span
-                className={`text-sm font-semibold tabular-nums ${highlight
-                    ? "text-emerald-700"
-                    : negative
-                        ? "text-rose-600"
-                        : "text-slate-900"
-                    }`}
+                className={cn(
+                    `text-sm font-semibold tabular-nums ${highlight
+                        ? "text-emerald-700"
+                        : negative
+                            ? "text-rose-600"
+                            : "text-slate-900"
+                    }`,
+                    className
+                )}
             >
                 {negative && value > 0 ? "- " : ""}
                 {currency(value)}
@@ -59,6 +65,7 @@ function SummaryRow({
         </div>
     );
 }
+
 
 export function ComputationSummary({
     result,
@@ -111,37 +118,42 @@ export function ComputationSummary({
         );
     }
 
-    const totalFees =
-        result.processingFee +
-        result.collectionFee +
-        result.loanProtectionFee +
-        result.icod;
+    const totalDeductedFees =
+        result.selectedDeductions.icod +
+        result.selectedDeductions.collectionFee +
+        result.selectedDeductions.processingFee +
+        result.selectedDeductions.loanProtectionFee;
+
+    const previousOutstandingFeesDeducted =
+        result.totalPreviousFeePayments;
+
+    const combinedDeductedFees = Math.round(
+        (
+            totalDeductedFees +
+            previousOutstandingFeesDeducted
+        ) * 100
+    ) / 100;
 
     const isRenewal =
         result.transactionType === "renew" ||
         result.activeLoanBalance > 0;
 
+    const isNegativeCashOut =
+        result !== null && result.totalCashOut < 0;
+
     return (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900">
-                        <ReceiptText
-                            size={19}
-                            className="text-white"
-                        />
-                    </div>
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                <div className="flex items-center gap-2">
+                    <ReceiptText
+                        size={18}
+                        className="text-slate-700"
+                    />
 
-                    <div>
-                        <h3 className="font-semibold text-slate-900">
-                            Computation Summary
-                        </h3>
-
-                        <p className="text-xs text-slate-500">
-                            Calculated loan breakdown
-                        </p>
-                    </div>
+                    <h3 className="font-semibold text-slate-900">
+                        Computation Summary
+                    </h3>
                 </div>
 
                 <div className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
@@ -150,30 +162,11 @@ export function ComputationSummary({
                 </div>
             </div>
 
-            {/* Primary Cash Out */}
-            <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-5">
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Wallet size={16} />
-                    Total Cash Out
-                </div>
-
-                <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
-                    {currency(result.totalCashOut)}
-                </p>
-
-                <p className="mt-2 text-xs text-slate-500">
-                    Final calculated amount after applicable
-                    fees and adjustments
-                </p>
-            </div>
-
-            {/* Main Computation */}
-            <div className="px-5 py-4">
-                <div className="mb-2 flex items-center justify-between">
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        Loan Computation
-                    </h4>
-                </div>
+            {/* Loan Computation */}
+            <div className="px-4 py-3">
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Loan Computation
+                </h4>
 
                 <div className="divide-y divide-slate-100">
                     <SummaryRow
@@ -194,30 +187,39 @@ export function ComputationSummary({
                 </div>
             </div>
 
-            {/* Deductions */}
-            <div className="border-t border-slate-100 px-5 py-4">
+            {/* Fees and Deductions */}
+            <div className="border-t border-slate-100 px-4 py-3">
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
                     Fees and Deductions
                 </h4>
 
                 <div className="divide-y divide-slate-100">
                     <SummaryRow
-                        label="Total Fees"
-                        value={totalFees}
+                        label="Current Deducted Fees"
+                        value={totalDeductedFees}
                         negative
                     />
 
+                    {previousOutstandingFeesDeducted > 0 && (
+                        <SummaryRow
+                            label="Previous Outstanding Fees Deducted"
+                            value={previousOutstandingFeesDeducted}
+                            negative
+                        />
+                    )}
+
                     <SummaryRow
-                        label="Net Cash Out"
-                        value={result.netCashOut}
-                        highlight
+                        label="Total Fees Deducted"
+                        value={combinedDeductedFees}
+                        negative
+                        className="font-semibold"
                     />
                 </div>
             </div>
 
-            {/* Renewal Information */}
+            {/* Renewal Adjustments */}
             {isRenewal && (
-                <div className="border-t border-slate-100 px-5 py-4">
+                <div className="border-t border-slate-100 px-4 py-3">
                     <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
                         Renewal Adjustments
                     </h4>
@@ -241,7 +243,7 @@ export function ComputationSummary({
             {/* Supplementary */}
             {(result.supplementary > 0 ||
                 result.supplementaryChargeToPay > 0) && (
-                    <div className="border-t border-slate-100 px-5 py-4">
+                    <div className="border-t border-slate-100 px-4 py-3">
                         <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
                             Supplementary
                         </h4>
@@ -252,36 +254,65 @@ export function ComputationSummary({
                                 value={result.supplementary}
                             />
 
-                            <SummaryRow
-                                label="Supplementary Charges"
-                                value={result.supplementaryChargeToPay}
-                                negative
-                            />
+                            {result.supplementaryChargeToPay > 0 && (
+                                <SummaryRow
+                                    label="Supplementary Charges"
+                                    value={result.supplementaryChargeToPay}
+                                    negative
+                                />
+                            )}
                         </div>
                     </div>
                 )}
 
-            {/* Effectivity */}
-            <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-4">
-                <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <CalendarDays size={16} />
-                        Effectivity Date
-                    </div>
-
-                    <span className="text-sm font-semibold text-slate-900">
-                        {result.effectivityDate}
-                    </span>
+            {/* Effectivity Date */}
+            <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                    <CalendarDays size={15} />
+                    Effectivity Date
                 </div>
+
+                <span className="text-sm font-semibold text-slate-900">
+                    {result.effectivityDate}
+                </span>
             </div>
 
-            {/* Actions */}
+            {/* Final Total Cash Out */}
+            <div className="border-t border-slate-200 bg-slate-50 px-4 py-5">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+                    <Wallet size={16} />
+                    Final Total Cash Out
+                </div>
+
+                <p
+                    className={`mt-2 text-3xl font-bold tracking-tight tabular-nums ${isNegativeCashOut
+                        ? "text-rose-600"
+                        : "text-slate-900"
+                        }`}
+                >
+                    {currency(result.totalCashOut)}
+                </p>
+
+                <p className="mt-2 text-xs text-slate-500">
+                    Amount after all applicable deductions and adjustments
+                </p>
+            </div>
+
+            {/* Negative Cash Out Warning */}
+            {isNegativeCashOut && (
+                <div className="border-t border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    Negative available cash-out.
+                    Please review and adjust the loan details.
+                </div>
+            )}
+
+            {/* Optional Details Action */}
             {onViewDetails && (
                 <div className="border-t border-slate-100 p-4">
                     <button
                         type="button"
                         onClick={onViewDetails}
-                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
                     >
                         View Full Computation Details
                         <ArrowUpRight size={16} />

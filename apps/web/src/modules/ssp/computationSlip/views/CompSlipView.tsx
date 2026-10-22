@@ -12,7 +12,7 @@ export default function CompSlipView() {
     const compSlipModal = useDisclosure();
 
     return (
-        <div className="min-h-full bg-[#F8F9F6] p-8">
+        <div className="min-h-full bg-[#F8F9F6] p-4">
             {/* Page heading */}
             <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
                 <div>

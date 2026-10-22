@@ -110,15 +110,15 @@ export function ActiveLoanList({
                                             </div>
                                         </td>
 
-                                        <td className="px-5 py-4 text-right tabular-nums">
+                                        <td className="px-5 py-4 text-right tabular-nums text-[#1B2430]">
                                             {currency(loan.installment)}
                                         </td>
 
-                                        <td className="px-5 py-4 text-right font-medium tabular-nums">
+                                        <td className="px-5 py-4 text-right font-medium tabular-nums text-[#1B2430]">
                                             {currency(loan.remainingBalance)}
                                         </td>
 
-                                        <td className="px-5 py-4 text-center">
+                                        <td className="px-5 py-4 text-center text-[#1B2430]">
                                             {loan.paidTerms} / {loan.terms}
                                         </td>
 

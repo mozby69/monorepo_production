@@ -1,4 +1,4 @@
-import { TRANSACTION_TYPES, ProcessingFeeConfig, type TransactionType, AGE_THRESHOLD_FOR_ADDITIONAL, ADDITIONAL_FEE_FOR_NEW_ACCOUNT, PROCESSING_FEE_FOR_CHANGE } from "@repo/shared";
+import { TRANSACTION_TYPES, ProcessingFeeConfig, type TransactionType, AGE_THRESHOLD_FOR_ADDITIONAL, ADDITIONAL_FEE_FOR_NEW_ACCOUNT } from "@repo/shared";
 
 type CalculateProcessingFeeParams = {
     transactionType: TransactionType;
@@ -21,7 +21,7 @@ export function calculateProcessingFee({
         } else {
             processingFee = fees.new.aboveFiveMonths;
         }
-    } else if (transactionType === TRANSACTION_TYPES.renew) {
+    } else if (transactionType === TRANSACTION_TYPES.renew || transactionType === TRANSACTION_TYPES.returnee) {
         if (terms <= 3) {
             processingFee = fees.existing.upToThreeMonths;
         } else if (terms <= 5) {
@@ -36,7 +36,7 @@ export function calculateProcessingFee({
             processingFee = fees.existing.tenToTwelveMonths;
         }
     } else if (transactionType === TRANSACTION_TYPES.change) {
-        processingFee = PROCESSING_FEE_FOR_CHANGE;
+        processingFee = fees.change.minimumFee;
     }
 
     const totalProcessingFee = age >= AGE_THRESHOLD_FOR_ADDITIONAL ? processingFee + ADDITIONAL_FEE_FOR_NEW_ACCOUNT : processingFee;

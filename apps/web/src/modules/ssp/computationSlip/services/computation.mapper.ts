@@ -10,12 +10,14 @@ import type {
     TransactionType,
     LoanStatus,
 } from "../types/computationSlip.types";
+import { SupplementaryLoanCharge } from "../types/ssp-supplementary.types";
 
 const TRANSACTION_TYPES: TransactionType[] = [
     "NEW",
-    "CLOSED_RENEW",
+    "RENEW",
     "TRANSFER",
-    "CHANGE_13TH_MONTH",
+    "CHANGE",
+    "ADVANCE",
     "RETURNEE",
     "ADDITIONAL",
 ];
@@ -92,6 +94,8 @@ export function mapLoanToView(
         pensionerId: loan.clientId,
 
         accountNumber: loan.accountNo,
+
+        pensionLoanInfoId: loan.pensionLoanInfoId,
         transactionType,
         loanStatus,
 
@@ -114,5 +118,35 @@ export function mapLoanToView(
             context.nextCollectionDate,
 
         udi: loan.udiAmount,
+    };
+}
+
+export function mapSupplementaryChargeToView(
+    charge: SupplementaryLoanCharge
+) {
+    return {
+        id: charge.id,
+
+        chargeMonth:
+            `${charge.yearEffectivity}-` +
+            `${String(charge.monthEffectivity).padStart(2, "0")}`,
+
+        principalBasis: charge.slBalance,
+
+        chargeAmount: charge.interestAmount,
+
+        paidAmount:
+            charge.status === "PAID"
+                ? charge.interestAmount
+                : 0,
+    };
+}
+
+export function mapSupplementaryCharge<
+    T extends { id: number }
+>(charge: T): Omit<T, "id"> & { id: string } {
+    return {
+        ...charge,
+        id: String(charge.id),
     };
 }

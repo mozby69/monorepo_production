@@ -80,3 +80,566 @@ model RolePermission {
   @@id([roleId, permissionId])
   @@map("role_permissions")
 }
+
+//MOCK SCHEMA
+
+model PenBranch {
+  id         String   @id @default(uuid()) @db.Uuid
+  branchCode String?  @unique @map("branch_code") @db.VarChar(100)
+  branchName String   @map("branch_name") @db.VarChar(150)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  clients          PenClientMain[]
+  clientFiles      PenClientFile[]
+  ledgers          PenSlLedger[]
+  inOutLogs        PenInOutLog[]
+  thirteenthMonths Pen13thMonth[]
+  insurances       PenInsurance[]
+  pdrRecords       PenPdr[]
+  schedules        PenSlMain[]
+  agents           PenAgent[]
+  charges          PenSlCharge[]
+
+  @@map("pen_branch")
+}
+
+model PenUser {
+  id       Int    @id @default(autoincrement())
+  username String @unique @db.VarChar(100)
+
+  inOutLogs PenInOutLog[]
+
+  @@map("pen_user")
+}
+
+model IdentificationTypeDomain {
+  code        Int    @id
+  description String
+
+  penClientFiles PenClientFile[] @relation("PenClientFiles")
+
+  @@map("identification_type_domain")
+}
+
+// ============================================
+// PEN ADDRESS
+// ============================================
+
+enum AddressType {
+  MI
+  AI
+}
+
+model PostalCodeReference {
+  id               String @id @default(uuid())
+  regionName       String
+  provinceName     String
+  municipalityName String
+
+  postalAreaName String?
+  postalAreaType String?
+
+  zipCode String
+
+  normalizedProvince     String
+  normalizedMunicipality String
+  normalizedPostalArea   String?
+
+  municipalityCode String?
+
+  source     String    @default("PHLPOST")
+  sourceUrl  String?
+  importedAt DateTime  @default(now())
+  verifiedAt DateTime?
+
+  @@unique([normalizedProvince, normalizedMunicipality, normalizedPostalArea, zipCode])
+  @@index([normalizedProvince, normalizedMunicipality, normalizedPostalArea])
+  @@index([municipalityCode])
+  @@index([zipCode])
+}
+
+model PenAddress {
+  id                 String      @id @default(uuid()) @db.Uuid
+  addressType        AddressType @default(MI)
+  addressFull        String?     @map("address_full")
+  addressStreetNo    String?     @map("address_street_no")
+  addressPostalCode  String?     @map("address_postal_code")
+  addressSubdivision String?     @map("address_subdivision")
+  addressBarangay    String?     @map("address_barangay")
+  addressCity        String?     @map("address_city")
+  addressProvince    String?     @map("address_province")
+  addressCountry     String?     @default("PH") @map("address_country")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  primaryForClients PenClientMain[] @relation("ClientPrimaryAddress")
+  connections       PenConnection[]
+
+  @@map("pen_address")
+}
+
+// ============================================
+// PEN LOAN INFO
+// ============================================
+
+model PenLoanInfo {
+  id       String @id @default(uuid()) @db.Uuid
+  clientId String @map("client_id") @db.Uuid
+  agentId  String @map("agent_id") @db.Uuid
+
+  pensionAmount      Decimal @default(0) @map("pension_amount") @db.Decimal(12, 2)
+  monthlyInstallment Decimal @default(0) @map("monthly_installment") @db.Decimal(12, 2)
+  changeAmount       Decimal @default(0) @map("change_amount") @db.Decimal(12, 2)
+  withdrawAll        Boolean @default(false) @map("withdraw_all")
+  collectionDay      Int?    @map("collection_day") @db.SmallInt
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client PenClientMain @relation(fields: [clientId], references: [id])
+  agent  PenAgent      @relation(fields: [agentId], references: [id])
+
+  @@index([clientId])
+  @@index([agentId])
+  @@map("pen_loan_info")
+}
+
+// ============================================
+// PEN CONNECTIONS
+// ============================================
+
+enum ConnectionType {
+  RELATIVE
+  DEPENDENT
+  COMAKER
+  SPOUSE
+}
+
+model PenConnection {
+  id       Int    @id @default(autoincrement())
+  clientId String @map("client_id") @db.Uuid
+
+  firstName  String    @map("first_name") @db.VarChar(100)
+  lastName   String    @map("last_name") @db.VarChar(100)
+  middleName String?   @map("middle_name") @db.VarChar(100)
+  suffix     String?   @db.VarChar(20)
+  nickname   String?   @db.VarChar(100)
+  birthDate  DateTime? @map("birth_date") @db.Date
+  birthPlace String?   @map("birth_place") @db.VarChar(255)
+
+  connectionType         ConnectionType? @map("connection_type")
+  relationshipToBorrower String?         @map("relationship_to_borrower") @db.VarChar(100)
+  addressId              String?         @map("address_id") @db.Uuid
+
+  currentOccupation String?  @map("current_occupation") @db.VarChar(150)
+  companyName       String?  @map("company_name") @db.VarChar(150)
+  companyAddress    String?  @map("company_address") @db.VarChar(255)
+  otherIncomeSource String?  @map("other_income_source") @db.VarChar(255)
+  monthlyIncome     Decimal? @map("monthly_income") @db.Decimal(12, 2)
+
+  contactNumber String? @map("contact_number") @db.VarChar(30)
+  validIdType   String? @map("valid_id_type") @db.VarChar(100)
+  validIdNumber String? @map("valid_id_number") @db.VarChar(100)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client  PenClientMain @relation(fields: [clientId], references: [id])
+  address PenAddress?   @relation(fields: [addressId], references: [id])
+
+  @@index([clientId])
+  @@index([addressId])
+  @@map("pen_connections")
+}
+
+// ============================================
+// PEN CLIENT MAIN
+// ============================================
+enum ClientStatus {
+  ACTIVE
+  FULLYPAID
+  DECEASED
+  GAWAD
+  BAD_ACCOUNT
+  TRANSFER
+}
+
+model GenderDomain {
+  id          String          @id @default(uuid())
+  code        String
+  description String
+  penClients  PenClientMain[]
+
+  @@map("gender_domain")
+}
+
+model CivilStatusDomain {
+  id          String          @id @default(uuid())
+  code        Int
+  description String
+  penClients  PenClientMain[]
+
+  @@map("civil_status_domain")
+}
+
+model PenClientMain {
+  id         String    @id @default(uuid()) @db.Uuid
+  title      String?   @db.VarChar(20)
+  lastName   String    @map("last_name") @db.VarChar(100)
+  firstName  String    @map("first_name") @db.VarChar(100)
+  middleName String?   @map("middle_name") @db.VarChar(100)
+  suffix     String?   @db.VarChar(20)
+  nickname   String?   @db.VarChar(100)
+  birthDate  DateTime? @map("birth_date") @db.Date
+  birthPlace String?   @map("birth_place") @db.VarChar(255)
+
+  addressId         String?      @map("address_id") @db.Uuid
+  bankName          String?      @map("bank_name") @db.VarChar(150)
+  bankAccountNumber String?      @map("bank_account_number") @db.VarChar(100)
+  genderId          String?
+  civilStatusId     String?
+  contactType       String?
+  contactValue      String?      @map("contact_value") @db.VarChar(100)
+  status            ClientStatus @default(ACTIVE)
+  grouping          String?      @db.VarChar(100)
+  atmBranch         String?      @map("atm_branch") @db.VarChar(150)
+  plp               Boolean      @default(false) @map("PLP")
+
+  branchId  String   @map("branch_id") @db.Uuid
+  pdrId     String   @map("pdr_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  branch           PenBranch          @relation(fields: [branchId], references: [id])
+  pdr              PenPdr             @relation("PdrRelation", fields: [pdrId], references: [id])
+  primaryAddress   PenAddress?        @relation("ClientPrimaryAddress", fields: [addressId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  gender           GenderDomain?      @relation(fields: [genderId], references: [id])
+  civilStatus      CivilStatusDomain? @relation(fields: [civilStatusId], references: [id])
+  referencedByPdrs PenPdr[]           @relation("PdrClientReference")
+
+  loanInfos          PenLoanInfo[]
+  connections        PenConnection[]
+  clientFile         PenClientFile?
+  collectionStatuses PenCollectionStatus[]
+  ledgers            PenSlLedger[]
+  inOutLogs          PenInOutLog[]
+  thirteenthMonths   Pen13thMonth[]
+  insurances         PenInsurance[]
+  schedules          PenSlMain[]
+
+  @@index([branchId])
+  @@index([lastName, firstName])
+  @@index([bankAccountNumber])
+  @@map("pen_client_main")
+}
+
+// ============================================
+// PEN CLIENT FILE
+// Merged duplicate table definitions
+// ============================================
+
+enum PensionType {
+  SSS
+  GSIS
+}
+
+model PenClientFile {
+  id       String @id @default(uuid()) @db.Uuid
+  clientId String @unique @map("client_id") @db.Uuid
+
+  employmentHistory         String?      @map("employment_history") @db.Text
+  employer                  String?      @db.VarChar(150)
+  dateRetired               DateTime?    @map("date_retired") @db.Date
+  pensionAgency             PensionType?
+  pensionIdNumber           String?      @map("pension_id_number") @db.VarChar(100)
+  passbookNumber            String?      @map("passbook_number") @db.VarChar(100)
+  registrationCertificateNo String?      @map("registration_certificate_no") @db.VarChar(100)
+  certificateDateIssued     DateTime?    @map("certificate_date_issued") @db.Date
+  dateIssued                DateTime?    @map("date_issued") @db.Date
+
+  otherIdType   Int?    @map("other_id_type")
+  otherIdNumber String? @map("other_id_number") @db.VarChar(100)
+
+  loanPurpose       String? @map("loan_purpose") @db.Text
+  signature         String? @db.VarChar(255)
+  leftThumbmarkUrl  String? @map("left_thumbmark_url") @db.VarChar(255)
+  rightThumbmarkUrl String? @map("right_thumbmark_url") @db.VarChar(255)
+  atmBranch         String? @map("atm_branch") @db.VarChar(150)
+
+  branchOfficeId String   @map("branch_office_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  client             PenClientMain             @relation(fields: [clientId], references: [id])
+  identificationType IdentificationTypeDomain? @relation("PenClientFiles", fields: [otherIdType], references: [code])
+  branch             PenBranch                 @relation(fields: [branchOfficeId], references: [id])
+
+  @@index([branchOfficeId])
+  @@map("pen_client_file")
+}
+
+// ============================================
+// PEN COLLECTION STATUS
+// ============================================
+
+enum CollectionStatus {
+  RESOLVED
+  UNCOLL
+  SHORTCOLL
+}
+
+model PenCollectionStatus {
+  id              String            @id @default(uuid()) @db.Uuid
+  clientId        String            @map("client_id") @db.Uuid
+  status          CollectionStatus?
+  isProblematic   Boolean           @default(false) @map("is_problematic")
+  transactionDate DateTime          @map("transaction_date") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client PenClientMain @relation(fields: [clientId], references: [id])
+
+  @@index([clientId, transactionDate])
+  @@map("pen_collection_status")
+}
+
+// ============================================
+// PEN SL LEDGER
+// ============================================
+
+model PenSlLedger {
+  id              String   @id @default(uuid()) @db.Uuid
+  clientId        String   @map("client_id") @db.Uuid
+  transactionDate DateTime @map("transaction_date") @db.Date
+
+  journalVoucherNo  String? @map("journal_voucher_no") @db.VarChar(100)
+  officialReceiptNo String? @map("official_receipt_no") @db.VarChar(100)
+
+  monthlyEffectivity Int     @default(0) @map("monthly_effectivity")
+  totalCollected     Decimal @default(0) @map("total_collected") @db.Decimal(12, 2)
+  appliedTo          String? @map("applied_to") @db.VarChar(150)
+  debit              Decimal @default(0) @db.Decimal(12, 2)
+  credit             Decimal @default(0) @db.Decimal(12, 2)
+  balance            Decimal @default(0) @db.Decimal(12, 2)
+  atmBalance         Decimal @default(0) @map("atm_balance") @db.Decimal(12, 2)
+
+  branchId String @map("branch_id") @db.Uuid
+
+  client PenClientMain @relation(fields: [clientId], references: [id])
+  branch PenBranch     @relation(fields: [branchId], references: [id])
+
+  @@index([clientId, transactionDate])
+  @@index([branchId])
+  @@map("pen_sl_ledger")
+}
+
+// ============================================
+// PEN IN OUT LOGS
+// ============================================
+
+model PenInOutLog {
+  id       String @id @default(uuid()) @db.Uuid
+  clientId String @map("client_id") @db.Uuid
+  userId   Int    @map("user_id")
+
+  inDate  DateTime  @map("in_date")
+  outDate DateTime? @map("out_date")
+
+  branchId  String   @map("branch_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client PenClientMain @relation(fields: [clientId], references: [id])
+  user   PenUser       @relation(fields: [userId], references: [id])
+  branch PenBranch     @relation(fields: [branchId], references: [id])
+
+  @@index([clientId])
+  @@index([userId])
+  @@index([branchId])
+  @@map("pen_in_out_logs")
+}
+
+// ============================================
+// PEN 13TH MONTH
+// ============================================
+
+model Pen13thMonth {
+  id            String   @id @default(uuid()) @db.Uuid
+  clientId      String   @map("client_id") @db.Uuid
+  availmentDate DateTime @map("availment_date") @db.Date
+
+  udiAmount       Decimal @default(0) @map("udi_amount") @db.Decimal(12, 2)
+  principalAmount Decimal @default(0) @map("principal_amount") @db.Decimal(12, 2)
+  cashout         Decimal @default(0) @db.Decimal(12, 2)
+
+  branchId  String   @map("branch_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client PenClientMain @relation(fields: [clientId], references: [id])
+  branch PenBranch     @relation(fields: [branchId], references: [id])
+
+  @@index([clientId])
+  @@index([branchId])
+  @@map("pen_13th_month")
+}
+
+// ============================================
+// PEN INSURANCE
+// ============================================
+
+model PenInsurance {
+  id       String @id @default(uuid()) @db.Uuid
+  clientId String @map("client_id") @db.Uuid
+
+  name          String    @db.VarChar(150)
+  loanType      String?   @map("loan_type") @db.VarChar(50)
+  availmentDate DateTime? @map("availment_date") @db.Date
+
+  pensionAmount   Decimal @default(0) @map("pension_amount") @db.Decimal(12, 2)
+  insuranceAmount Decimal @default(0) @map("insurance_amount") @db.Decimal(12, 2)
+  paidAmount      Decimal @default(0) @map("paid_amount") @db.Decimal(12, 2)
+  balance         Decimal @default(0) @db.Decimal(12, 2)
+
+  periodYears Int?      @map("period_years")
+  excess      Decimal   @default(0) @db.Decimal(12, 2)
+  expiryDate  DateTime? @map("expiry_date") @db.Date
+  status      String?   @db.VarChar(30)
+
+  branchId String @map("branch_id") @db.Uuid
+
+  client PenClientMain @relation(fields: [clientId], references: [id])
+  branch PenBranch     @relation(fields: [branchId], references: [id])
+
+  @@index([clientId])
+  @@index([branchId])
+  @@map("pen_insurance")
+}
+
+// ============================================
+// PEN PDR
+// ============================================
+
+model PenPdr {
+  id    String @id @default(uuid()) @db.Uuid
+  pdrId String @map("pdr_id") @db.Uuid
+
+  name            String    @db.VarChar(150)
+  status          String?   @db.VarChar(30)
+  endorseDate     DateTime? @map("endorse_date") @db.Date
+  transactionDate DateTime? @map("Transaction_date") @db.Date
+  referenceNumber String?   @map("reference_number") @db.VarChar(100)
+
+  prevBalance   Decimal @default(0) @map("prev_balance") @db.Decimal(12, 2)
+  appliedAmount Decimal @default(0) @map("applied_amount") @db.Decimal(12, 2)
+  endBal        Decimal @default(0) @map("end_bal") @db.Decimal(12, 2)
+
+  branchId String @map("branch_id") @db.Uuid
+
+  pdrReference PenClientMain @relation("PdrClientReference", fields: [pdrId], references: [id])
+
+  branch  PenBranch       @relation(fields: [branchId], references: [id])
+  clients PenClientMain[] @relation("PdrRelation")
+
+  @@index([pdrId])
+  @@index([branchId])
+  @@map("pen_pdr")
+}
+
+// ============================================
+// PEN SL MAIN
+// ============================================
+
+model PenSlMain {
+  id       String @id @default(uuid()) @db.Uuid
+  clientId String @map("client_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+
+  availmentDate    DateTime @map("availment_date") @db.Date
+  beginningBalance Decimal  @default(0) @map("beginning_balance") @db.Decimal(12, 2)
+  terms            Int
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client  PenClientMain @relation(fields: [clientId], references: [id])
+  branch  PenBranch     @relation(fields: [branchId], references: [id])
+  charges PenSlCharge[]
+
+  @@index([clientId])
+  @@index([branchId])
+  @@map("pen_sl_main")
+}
+
+// ============================================
+// PEN AGENT
+// ============================================
+
+model PenAgent {
+  id                      String    @id @default(uuid()) @db.Uuid
+  profilePicture          String?   @map("profile_picture") @db.Text
+  agentCode               String    @unique @map("agent_code") @db.VarChar(100)
+  username                String    @unique @db.VarChar(100)
+  fullName                String    @map("full_name") @db.VarChar(100)
+  gender                  String?   @db.VarChar(20)
+  birthDate               DateTime? @map("birth_date") @db.Date
+  address                 String?   @db.VarChar(255)
+  email                   String?   @db.VarChar(100)
+  telephone               String?   @db.VarChar(20)
+  secondaryTel            String?   @map("secondary_tel") @db.VarChar(20)
+  creditScore             Int       @default(0) @map("credit_score")
+  consecutiveMonthsActive Int       @default(0) @map("consecutive_months_active")
+
+  branchId String @map("branch_id") @db.Uuid
+
+  branch    PenBranch     @relation(fields: [branchId], references: [id])
+  loanInfos PenLoanInfo[]
+
+  @@index([branchId])
+  @@map("pen_agent")
+}
+
+// ============================================
+// PEN SL CHARGES
+// ============================================
+
+model PenSlCharge {
+  id   String @id @default(uuid()) @db.Uuid
+  slId String @map("sl_id") @db.Uuid
+
+  monthEffectivity DateTime @map("month_effectivity") @db.Date
+  slBalance        Decimal  @default(0) @map("sl_balance") @db.Decimal(12, 2)
+  interestAmount   Decimal  @default(0) @map("interest_amount") @db.Decimal(12, 2)
+  status           String   @db.VarChar(20)
+
+  branchId  String   @map("branch_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  schedule PenSlMain @relation(fields: [slId], references: [id])
+  branch   PenBranch @relation(fields: [branchId], references: [id])
+
+  @@index([slId])
+  @@index([branchId])
+  @@map("pen_sl_charges")
+}
+
+// ============================================
+// BLACKLISTED SSP
+// ============================================
+
+model BlacklistedSsp {
+  id        String  @id @default(uuid()) @db.Uuid
+  name      String? @db.VarChar(25)
+  bank      String? @db.VarChar(32)
+  accountno String? @db.VarChar(23)
+  remarks   String? @db.VarChar(83)
+  lending   String? @db.VarChar(35)
+
+  @@index([name])
+  @@index([accountno])
+  @@map("blacklisted_ssp")
+}

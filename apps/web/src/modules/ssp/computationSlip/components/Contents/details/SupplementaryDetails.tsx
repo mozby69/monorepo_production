@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Wallet, CalendarDays } from "lucide-react";
@@ -6,13 +7,19 @@ import type {
     ComputationManagerResult,
 } from "../../../services/computation.manager";
 
-type SupplementaryDetailsProps = {
-    result: ComputationManagerResult;
-};
-
 type Charge = ComputationManagerResult[
     "supplementaryChargeBreakdown"
 ][number];
+
+type SupplementaryDetailsProps = {
+    result: ComputationManagerResult;
+
+    selectedChargeIds: string[];
+
+    onSelectedChargeIdsChange: (
+        ids: string[]
+    ) => void;
+};
 
 const currency = (value: number) =>
     new Intl.NumberFormat("en-PH", {
@@ -43,9 +50,13 @@ function AmountCard({
 function ChargeTable({
     title,
     charges,
+    selectedChargeIds,
+    onToggle,
 }: {
     title: string;
     charges: Charge[];
+    selectedChargeIds: string[];
+    onToggle: (id: string) => void;
 }) {
     return (
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -61,51 +72,77 @@ function ChargeTable({
 
             {charges.length === 0 ? (
                 <div className="px-5 py-8 text-center text-sm text-slate-500">
-                    No charges available.
+                    No outstanding charges.
                 </div>
             ) : (
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead className="bg-slate-50 text-left text-xs text-slate-500">
                             <tr>
-                                <th className="px-4 py-3 font-medium">
+                                <th className="px-4 py-3">
+                                    Pay
+                                </th>
+                                <th className="px-4 py-3">
                                     Month
                                 </th>
-
-                                <th className="px-4 py-3 text-right font-medium">
+                                <th className="px-4 py-3 text-right">
                                     Charge
                                 </th>
-
-                                <th className="px-4 py-3 text-right font-medium">
+                                <th className="px-4 py-3 text-right">
                                     Paid
                                 </th>
-
-                                <th className="px-4 py-3 text-right font-medium">
+                                <th className="px-4 py-3 text-right">
                                     Outstanding
                                 </th>
                             </tr>
                         </thead>
 
                         <tbody className="divide-y divide-slate-100">
-                            {charges.map((charge) => (
-                                <tr key={charge.id}>
-                                    <td className="whitespace-nowrap px-4 py-3">
-                                        {charge.chargeMonth}
-                                    </td>
+                            {charges.map((charge) => {
+                                const checked =
+                                    selectedChargeIds.includes(
+                                        charge.id
+                                    );
 
-                                    <td className="px-4 py-3 text-right tabular-nums">
-                                        {currency(charge.chargeAmount)}
-                                    </td>
+                                return (
+                                    <tr key={charge.id}>
+                                        <td className="px-4 py-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={checked}
+                                                onChange={() =>
+                                                    onToggle(
+                                                        charge.id
+                                                    )
+                                                }
+                                                className="h-4 w-4 accent-emerald-700"
+                                            />
+                                        </td>
 
-                                    <td className="px-4 py-3 text-right tabular-nums">
-                                        {currency(charge.paidAmount)}
-                                    </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-black">
+                                            {charge.chargeMonth}
+                                        </td>
 
-                                    <td className="px-4 py-3 text-right font-medium tabular-nums">
-                                        {currency(charge.outstandingAmount)}
-                                    </td>
-                                </tr>
-                            ))}
+                                        <td className="px-4 py-3 text-right tabular-nums text-black">
+                                            {currency(
+                                                charge.chargeAmount
+                                            )}
+                                        </td>
+
+                                        <td className="px-4 py-3 text-right tabular-nums text-black">
+                                            {currency(
+                                                charge.paidAmount
+                                            )}
+                                        </td>
+
+                                        <td className="px-4 py-3 text-right font-medium tabular-nums text-black">
+                                            {currency(
+                                                charge.outstandingAmount
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -116,7 +153,42 @@ function ChargeTable({
 
 export function SupplementaryDetails({
     result,
+    selectedChargeIds,
+    onSelectedChargeIdsChange,
 }: SupplementaryDetailsProps) {
+
+    const currentCharges =
+        result.availableCurrentSupplementaryCharges;
+
+    const carriedCharges =
+        result.availableCarriedSupplementaryCharges;
+
+    const allCharges = [
+        ...currentCharges,
+        ...carriedCharges,
+    ];
+
+    const selectedCharges = allCharges.filter(
+        (charge) =>
+            selectedChargeIds.includes(charge.id)
+    );
+
+    const selectedTotal = selectedCharges.reduce(
+        (sum, charge) =>
+            sum + charge.outstandingAmount,
+        0
+    );
+
+    const toggleCharge = (id: string) => {
+        const nextIds = selectedChargeIds.includes(id)
+            ? selectedChargeIds.filter(
+                (chargeId) => chargeId !== id
+            )
+            : [...selectedChargeIds, id];
+
+        onSelectedChargeIdsChange(nextIds);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-3">
@@ -175,7 +247,7 @@ export function SupplementaryDetails({
                 <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                     <div>
                         <p className="text-xl font-semibold">
-                            {result.supplementaryChargeAvailableMonths}
+                            {allCharges.length}
                         </p>
                         <p className="text-xs text-slate-500">
                             Available
@@ -184,7 +256,7 @@ export function SupplementaryDetails({
 
                     <div>
                         <p className="text-xl font-semibold">
-                            {result.supplementaryChargeMonthsToPay}
+                            {selectedCharges.length}
                         </p>
                         <p className="text-xs text-slate-500">
                             Selected
@@ -193,7 +265,8 @@ export function SupplementaryDetails({
 
                     <div>
                         <p className="text-xl font-semibold">
-                            {result.supplementaryChargeRemainingMonths}
+                            {allCharges.length -
+                                selectedCharges.length}
                         </p>
                         <p className="text-xs text-slate-500">
                             Remaining
@@ -204,21 +277,25 @@ export function SupplementaryDetails({
 
             <ChargeTable
                 title="Current Loan Charges"
-                charges={result.supplementaryChargeBreakdown}
+                charges={currentCharges}
+                selectedChargeIds={selectedChargeIds}
+                onToggle={toggleCharge}
             />
 
             <ChargeTable
                 title="Carried Supplementary Charges"
-                charges={result.carriedSupplementaryChargeBreakdown}
+                charges={carriedCharges}
+                selectedChargeIds={selectedChargeIds}
+                onToggle={toggleCharge}
             />
 
             <div className="rounded-xl bg-slate-900 p-5 text-white">
                 <p className="text-sm text-slate-300">
-                    Supplementary Charges Applied to Cash Out
+                    Supplementary Charges Selected
                 </p>
 
                 <p className="mt-2 text-2xl font-bold tabular-nums">
-                    {currency(result.supplementaryChargeToPay)}
+                    {currency(selectedTotal)}
                 </p>
             </div>
         </div>

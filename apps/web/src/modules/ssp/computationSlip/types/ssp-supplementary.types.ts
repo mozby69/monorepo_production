@@ -18,9 +18,19 @@ export interface SupplementaryLoanAccount {
 
     terms: number;
 
+    status: SupplementaryStatus;
+    previous_sl_id: number;
+
+
     createdAt: DateString;
     updatedAt: DateString;
 }
+
+export type SupplementaryStatus =
+    | "ACTIVE"
+    | "RENEWED"
+    | "CLOSED";
+
 
 export type SupplementaryChargeStatus =
     | "PAID"

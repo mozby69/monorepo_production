@@ -1,4 +1,5 @@
 export * from "./SSP/loan.constants";
+export * from "./SSP/deductionCodes.constants";
 
 export const AUTH_COOKIE = "access_token";
 

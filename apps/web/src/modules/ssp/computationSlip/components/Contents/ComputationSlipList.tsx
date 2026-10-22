@@ -15,19 +15,23 @@ import {
 
 import {
     mockComputationSlips,
-    type ComputationSlip,
-    type ComputationSlipStatus,
-} from "@/modules/ssp/computationSlip/fixtures/computationSlipFixtures";
+    type ComputationSlipListItem,
+    type MockPensionerListItem,
+} from "@/modules/ssp/computationSlip/fixtures/computationSlip.fixtures";
+
+import type {
+    PensionerStatus,
+} from "@/modules/ssp/computationSlip/types/computationSlip.types";
 
 import { formatDate } from "@/utils/format-date";
 import { DEFAULT_PAGE_SIZE, formatCurrency } from "@repo/shared";
 
 type ComputationSlipTableProps = {
-    onSelect?: (computationSlip: ComputationSlip) => void;
-    onEdit?: (computationSlip: ComputationSlip) => void;
+    onSelect?: (computationSlip: ComputationSlipListItem) => void;
+    onEdit?: (computationSlip: ComputationSlipListItem) => void;
 };
 
-type StatusFilter = "All" | ComputationSlipStatus;
+type StatusFilter = "All" | PensionerStatus;
 
 const headings = [
     "Pensioner ID",
@@ -41,7 +45,7 @@ const headings = [
     "Actions",
 ];
 
-const statusStyles: Record<ComputationSlipStatus, string> = {
+const statusStyles: Record<PensionerStatus, string> = {
     Active: "bg-green-50 text-green-700",
     Pending: "bg-amber-50 text-amber-700",
     Inactive: "bg-gray-100 text-gray-600",
@@ -106,12 +110,12 @@ export default function CompSlipList({
         setOpenMenu(null);
     };
 
-    const handleView = (computation: ComputationSlip) => {
+    const handleView = (computation: ComputationSlipListItem) => {
         setOpenMenu(null);
         onSelect?.(computation);
     };
 
-    const handleEdit = (computation: ComputationSlip) => {
+    const handleEdit = (computation: ComputationSlipListItem) => {
         setOpenMenu(null);
         onEdit?.(computation);
     };

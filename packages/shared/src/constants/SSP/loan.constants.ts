@@ -12,6 +12,8 @@ export type ProcessingFeeConfig = {
         nineMonths: number;
         tenToTwelveMonths: number;
     };
+
+    change: { minimumFee: number; }
 };
 
 
@@ -20,6 +22,7 @@ export const TRANSACTION_TYPES = {
     renew: "renew",
     transfer: "transfer",
     change: "change",
+    advance: "advance",
     returnee: "returnee",
     additional: "additional",
 } as const;
@@ -41,6 +44,10 @@ export const PROCESSING_FEE: ProcessingFeeConfig = {
         nineMonths: 530,
         tenToTwelveMonths: 580,
     },
+
+    change: {
+        minimumFee: 50,
+    }
 };
 
 export const AGE_THRESHOLD_FOR_ADDITIONAL = 71;
@@ -190,8 +197,6 @@ export type SLCollectionStatusType =
     typeof SL_COLLECTION_STATUS[keyof typeof SL_COLLECTION_STATUS];
 
 export const MINIMUM_PAID_TERMS_FOR_RENEWAL = 1;
-
-export const PROCESSING_FEE_FOR_CHANGE = 50;
 
 export const LOAN_COLLECTION_TYPE = {
     regular: "REGULAR",

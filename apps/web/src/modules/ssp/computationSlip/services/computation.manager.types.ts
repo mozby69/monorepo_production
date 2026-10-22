@@ -3,7 +3,9 @@ import type {
     ActiveLoan,
     ComputationSlipFormValues,
     Pensioner,
+    PreviousOutstandingFee,
 } from "../types/computationSlip.types";
+import { LoanCollection } from "../types/ssp-domain.types";
 
 export interface SupplementaryCharge {
     id: string;
@@ -20,6 +22,12 @@ export interface ComputationManagerInput {
 
     currentOutstandingCharges?: SupplementaryCharge[];
     carriedOutstandingCharges?: SupplementaryCharge[];
+
+    loanCollections?: LoanCollection[];
+
+    previousOutstandingFees: PreviousOutstandingFee[];
+
+    availableChangeAmount?: number;
 }
 
 export interface ComputationChargeBreakdown {

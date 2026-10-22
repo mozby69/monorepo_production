@@ -1,3 +1,4 @@
+
 import {
     TRANSACTION_TYPES,
     UDI_RATE,
@@ -16,9 +17,11 @@ import {
     calculateICOD,
     calculateUDIRebateAmount,
     calculateLoanEffectivityDate,
-    calculateSourceLoanBalance,
     calculateNetCashOut,
     formatDateApi,
+    calculateChargePayment,
+    calculateSelectedDeductions,
+    calculatePreviousFeePayments,
 } from "@repo/shared";
 
 import type {
@@ -26,13 +29,35 @@ import type {
     SupplementaryCharge,
 } from "./computation.manager.types";
 
-import type {
-    ComputationSchedules,
-} from "./computationSchedule.types";
-
 import {
     computationScheduleManager,
 } from "./computationSchedule.manager";
+
+import {
+    analyzeLoanCollections,
+} from "./computationCollection.manager";
+
+import {
+    calculateRenewalProjection,
+} from "./computationRenewal.manager";
+
+import {
+    calculateSelectedSupplementaryCharges,
+} from "./computationSupplementaryCharges.manager";
+
+// =====================================================
+// HELPERS
+// =====================================================
+
+function toDate(value: string): Date {
+    const date = new Date(`${value}T00:00:00Z`);
+
+    if (Number.isNaN(date.getTime())) {
+        throw new Error(`Invalid date: ${value}`);
+    }
+
+    return date;
+}
 
 function getOutstandingAmount(
     charge: SupplementaryCharge
@@ -50,40 +75,45 @@ function mapCharge(charge: SupplementaryCharge) {
     };
 }
 
-function toDate(value: string): Date {
-    const date = new Date(`${value}T00:00:00Z`);
-
-    if (Number.isNaN(date.getTime())) {
-        throw new Error(`Invalid date: ${value}`);
-    }
-
-    return date;
-}
+// =====================================================
+// COMPUTATION MANAGER
+// =====================================================
 
 export function computationManager({
     values,
     pensioner,
     activeLoan,
+    availableChangeAmount,
     currentOutstandingCharges = [],
     carriedOutstandingCharges = [],
+    previousOutstandingFees,
+    loanCollections = [],
 }: ComputationManagerInput) {
+
+    // =================================================
+    // 1. TRANSACTION INFORMATION
+    // =================================================
+
     const transactionDate = toDate(
         values.transactionDate
     );
 
-    // Map the prototype's transaction identifiers to
-    // the actual shared transaction constants.
     const transactionTypeMap = {
         NEW: TRANSACTION_TYPES.new,
-        CLOSED_RENEW: TRANSACTION_TYPES.renew,
+        RENEW: TRANSACTION_TYPES.renew,
         TRANSFER: TRANSACTION_TYPES.transfer,
-        CHANGE_13TH_MONTH: TRANSACTION_TYPES.change,
+        CHANGE: TRANSACTION_TYPES.change,
+        ADVANCE: TRANSACTION_TYPES.advance,
         RETURNEE: TRANSACTION_TYPES.returnee,
         ADDITIONAL: TRANSACTION_TYPES.additional,
     } as const;
 
     const transactionType =
         transactionTypeMap[values.transactionType];
+
+    if (!transactionType) {
+        throw new Error("Invalid transaction type.");
+    }
 
     const isRenew =
         transactionType === TRANSACTION_TYPES.renew;
@@ -101,15 +131,18 @@ export function computationManager({
         toDate(pensioner.birthDate)
     );
 
-    const paidTermsBeforeRenewal =
-        activeLoan?.paidTerms ?? 0;
+    // =================================================
+    // 2. LOAN INFORMATION
+    // =================================================
 
     const supplementary =
         Number(values.supplementary) || 0;
 
-    const supplementaryBalance =
-        supplementary +
+    const existingSupplementaryBalance =
         Number(activeLoan?.supplementaryBalance ?? 0);
+
+    const supplementaryBalance =
+        existingSupplementaryBalance + supplementary;
 
     const installment = isChange
         ? 0
@@ -117,13 +150,124 @@ export function computationManager({
             ? Number(activeLoan?.installment ?? 0)
             : Number(values.installment);
 
-    const applicableCollectionTerms = isRenew
-        ? paidTermsBeforeRenewal
-        : values.terms;
-
     const principalAmount = isChange
         ? 0
         : installment * values.terms;
+
+    // =================================================
+    // 3. LOAN EFFECTIVITY
+    // =================================================
+
+    const effectivityDate =
+        calculateLoanEffectivityDate({
+            date: transactionDate,
+            cutOffDate: CUT_OFF_DATE_FOR_EFFECTIVITY,
+        });
+
+    const effectivityDateString =
+        formatDateApi(effectivityDate);
+
+    // =================================================
+    // 4. ACTUAL COLLECTION ANALYSIS
+    // =================================================
+
+    const collectionAnalysis =
+        isRenew && activeLoan
+            ? analyzeLoanCollections(
+                activeLoan.id,
+                activeLoan.installment,
+                loanCollections,
+                values.transactionDate
+            )
+            : null;
+
+    const actualPaidTerms =
+        collectionAnalysis?.actualPaidTerms ??
+        activeLoan?.paidTerms ??
+        0;
+
+    // =================================================
+    // 5. RENEWAL PROJECTION
+    // =================================================
+
+    const renewalProjection =
+        isRenew && activeLoan && collectionAnalysis
+            ? calculateRenewalProjection({
+                loan: {
+                    id: activeLoan.id,
+
+                    loanStatus:
+                        activeLoan.loanStatus,
+
+                    monthEffectivity: Number(
+                        activeLoan.effectivityDate.slice(
+                            5,
+                            7
+                        )
+                    ),
+
+                    yearEffectivity: Number(
+                        activeLoan.effectivityDate.slice(
+                            0,
+                            4
+                        )
+                    ),
+
+                    terms: activeLoan.terms,
+                },
+
+                currentBalance:
+                    activeLoan.remainingBalance,
+
+                installment:
+                    activeLoan.installment,
+
+                transactionDate:
+                    values.transactionDate,
+
+                newEffectivityDate:
+                    effectivityDateString,
+
+                settledPeriodIndexes:
+                    collectionAnalysis.settledPeriodIndexes,
+            })
+            : null;
+
+    const projectedLRCollections =
+        renewalProjection?.projectedLRCollections ?? 0;
+
+    const projectedPaidTerms =
+        renewalProjection?.projectedPaidTerms ?? 0;
+
+    const effectivePaidTerms =
+        actualPaidTerms + projectedPaidTerms;
+
+    const activeLoanBalance =
+        isRenew && activeLoan
+            ? renewalProjection
+                ?.projectedSourceLoanBalance
+            ?? activeLoan.remainingBalance
+            : 0;
+
+    const sourceResidualBalance =
+        isRenew && activeLoan
+            ? Math.max(0, activeLoanBalance)
+            : 0;
+
+    const sourceLoanStatus =
+        !isRenew || !activeLoan
+            ? null
+            : "RENEWED";
+
+    // Projection indicator only.
+    // Do not post actual collections here.
+    const shouldCreateSourceCollection =
+        isRenew &&
+        projectedLRCollections > 0;
+
+    // =================================================
+    // 6. PRINCIPAL / UDI
+    // =================================================
 
     const udi = isChange
         ? 0
@@ -133,12 +277,23 @@ export function computationManager({
             terms: values.terms,
         });
 
-    const processingFee = calculateProcessingFee({
-        transactionType,
-        terms: applicableCollectionTerms,
-        fees: PROCESSING_FEE,
-        age: Number(age),
-    });
+    // Preserve the original renewal fee basis.
+    // This uses the effective paid terms after projection.
+    const applicableCollectionTerms = isRenew
+        ? effectivePaidTerms
+        : values.terms;
+
+    // =================================================
+    // 7. FEES
+    // =================================================
+
+    const processingFee =
+        calculateProcessingFee({
+            transactionType,
+            terms: applicableCollectionTerms,
+            fees: PROCESSING_FEE,
+            age: Number(age),
+        });
 
     const collectionFee = isChange
         ? 0
@@ -155,6 +310,7 @@ export function computationManager({
             amountFee: LOAN_PROTECTION_FEE,
         });
 
+    // 1. Calculate the required ICOD
     const icod = isChange
         ? 0
         : calculateICOD({
@@ -164,11 +320,32 @@ export function computationManager({
             percentage: ICOD.percentage,
             existingAmountFee: ICOD.existingAmountFee,
             newMaximumFee: ICOD.newMaximumFee,
+
             originalTransactionDate: activeLoan
                 ? toDate(activeLoan.transactionDate)
                 : undefined,
-            renewalTransactionDate: transactionDate,
+
+            renewalTransactionDate:
+                transactionDate,
         });
+
+
+    // 2. Determine how much ICOD to pay
+    // If the user hasn't overridden it, pay the full amount.
+    const icodAmountToPay =
+        values.icodAmountToPay == null
+            ? icod
+            : Number(values.icodAmountToPay);
+
+    // 3. Calculate payment and remaining balance
+    const icodPayment = calculateChargePayment({
+        requiredAmount: icod,
+        amountToPay: icodAmountToPay,
+    });
+
+    // =================================================
+    // 8. UDI REBATE
+    // =================================================
 
     const udiRebate =
         isRenew && activeLoan
@@ -176,77 +353,96 @@ export function computationManager({
                 originalTransactionDate: toDate(
                     activeLoan.transactionDate
                 ),
-                renewalTransactionDate: transactionDate,
+
+                renewalTransactionDate:
+                    transactionDate,
+
                 udi: activeLoan.udi,
                 terms: activeLoan.terms,
                 cutOffDate: CUT_OFF_DATE_UDI,
             })
             : 0;
 
-    const effectivityDate =
-        calculateLoanEffectivityDate({
-            date: transactionDate,
-            cutOffDate: CUT_OFF_DATE_FOR_EFFECTIVITY,
-        });
+    // =================================================
+    // 9. SUPPLEMENTARY CHARGE SELECTION
+    // =================================================
 
-    const sourceLoanBalance =
-        isRenew && activeLoan
-            ? calculateSourceLoanBalance({
-                remainingBalance:
-                    activeLoan.remainingBalance,
-                installment,
-                nextCollectionDate: toDate(
-                    activeLoan.nextCollectionDate
-                ),
-                newEffectivityDate: effectivityDate,
-            })
-            : {
-                projectedBalance: 0,
-                collectionCount: 0,
-            };
+    // All charges from the current and carried loans
+    const allOutstandingCharges = [
+        ...carriedOutstandingCharges,
+        ...currentOutstandingCharges,
+    ];
 
-    console.log('activeLoan', activeLoan);
-    console.log('complslip calc', sourceLoanBalance);
+    // Remove duplicate charges by ID
+    const uniqueOutstandingCharges = [
+        ...new Map(
+            allOutstandingCharges.map((charge) => [
+                charge.id,
+                charge,
+            ])
+        ).values(),
+    ];
 
-    // Renewal balance projection
-    const shouldCreateSourceCollection =
-        isRenew &&
-        activeLoan !== null &&
-        toDate(activeLoan.nextCollectionDate) <
-        effectivityDate;
-
-    const activeLoanBalance =
-        isRenew && activeLoan
-            ? shouldCreateSourceCollection
-                ? sourceLoanBalance.projectedBalance
-                : activeLoan.remainingBalance
-            : 0;
-
-    const sourceResidualBalance =
-        isRenew && activeLoan
-            ? Math.max(
-                0,
-                activeLoan.remainingBalance -
-                activeLoanBalance
-            )
-            : 0;
-
-    const sourceLoanStatus =
-        sourceResidualBalance <= 0
-            ? "CLOSED"
-            : "RENEWED";
-
-    // Supplementary charges
-    const selectedCurrentCharges =
-        isRenew
-            ? currentOutstandingCharges.slice(
-                0,
-                Math.max(
-                    0,
-                    values.supplementaryChargeMonthsToPay
-                )
-            )
+    // IDs selected by counter staff
+    const selectedChargeIds: string[] =
+        values.applySupplementaryCharge
+            ? values.selectedSupplementaryChargeIds ?? []
             : [];
+
+    // Validate selected IDs
+    const availableChargeIds = new Set(
+        uniqueOutstandingCharges.map(
+            (charge) => charge.id
+        )
+    );
+
+    if (
+        selectedChargeIds.some(
+            (id) => !availableChargeIds.has(id)
+        )
+    ) {
+        throw new Error(
+            "One or more selected SL charges are invalid."
+        );
+    }
+
+    // =================================================
+    // AVAILABLE CHARGES (FOR DISPLAY)
+    // =================================================
+
+    // All available current charges
+    const availableCurrentCharges =
+        currentOutstandingCharges.map(mapCharge);
+
+    // All available carried charges
+    const availableCarriedCharges =
+        carriedOutstandingCharges.map(mapCharge);
+
+    // =================================================
+    // SELECTED CHARGES (FOR COMPUTATION)
+    // =================================================
+
+    const selectedCharges =
+        uniqueOutstandingCharges.filter(
+            (charge) =>
+                selectedChargeIds.includes(charge.id)
+        );
+
+    const selectedCurrentCharges =
+        currentOutstandingCharges.filter(
+            (charge) =>
+                selectedChargeIds.includes(charge.id)
+        );
+
+    const selectedCarriedCharges =
+        carriedOutstandingCharges.filter(
+            (charge) =>
+                selectedChargeIds.includes(charge.id)
+        );
+
+    // =================================================
+    // SELECTED CHARGE TOTALS
+    // =================================================
 
     const currentSupplementaryCharge =
         selectedCurrentCharges.reduce(
@@ -256,55 +452,193 @@ export function computationManager({
         );
 
     const carriedSupplementaryCharge =
-        isRenew
-            ? carriedOutstandingCharges.reduce(
-                (total, charge) =>
-                    total + getOutstandingAmount(charge),
-                0
-            )
-            : 0;
+        selectedCarriedCharges.reduce(
+            (total, charge) =>
+                total + getOutstandingAmount(charge),
+            0
+        );
 
-    const supplementaryChargeToPay =
-        values.applySupplementaryCharge
-            ? carriedSupplementaryCharge +
-            currentSupplementaryCharge
-            : 0;
+    // =================================================
+    // CHARGES AVAILABLE FOR SELECTION
+    // =================================================
+
+    const selectableCharges =
+        uniqueOutstandingCharges.map(
+            (charge) => ({
+                id: charge.id,
+                interestAmount:
+                    getOutstandingAmount(charge),
+            })
+        );
+    // =================================================
+    // 10. CHANGE AMOUNT
+    // =================================================
 
     const changeAmount = isChange
-        ? Number(values.changeAmount) || 0
+        ? Number(values.changeAmount)
         : 0;
 
-    const cashOut = calculateNetCashOut({
+    if (isChange) {
+        if (!Number.isFinite(changeAmount) || changeAmount <= 0) {
+            throw new Error(
+                "CHANGE amount must be greater than zero."
+            );
+        }
+
+        if (availableChangeAmount == null) {
+            throw new Error(
+                "Available CHANGE balance is required."
+            );
+        }
+
+        if (changeAmount > availableChangeAmount) {
+            throw new Error(
+                "CHANGE amount exceeds available balance."
+            );
+        }
+    }
+
+    // =================================================
+    // 11. CASH-OUT BEFORE SL CHARGES
+    // =================================================
+
+    // Current transaction deductions
+    // CHANGE generates only a processing fee.
+    const selectedDeductions = calculateSelectedDeductions({
+        selectedCodes: isChange
+            ? ["PROC_FEE"]
+            : values.selectedDeductionCodes ?? [],
+
+        icod: isChange ? 0 : icodPayment.amountToPay,
+
+        collectionFee: isChange ? 0 : collectionFee,
+
+        processingFee,
+
+        loanProtectionFee: isChange ? 0 : loanProtectionFee,
+    });
+
+    // Payments against fees from previous transactions
+    const previousFeePaymentResult =
+        calculatePreviousFeePayments(
+            previousOutstandingFees.map((fee) => ({
+                feeItemId: fee.feeItemId,
+                outstandingAmount: fee.outstandingAmount,
+            })),
+            values.previousFeePayments ?? []
+        );
+
+    // Preliminary cash-out before supplementary charges
+    const cashOutBeforeSLChargesBase = calculateNetCashOut({
         transactionType,
         principalAmount,
         udi,
-        collectionFee,
-        processingFee,
-        loanProtectionFee,
-        icod,
+
+        collectionFee: selectedDeductions.collectionFee,
+        processingFee: selectedDeductions.processingFee,
+        loanProtectionFee: selectedDeductions.loanProtectionFee,
+        icod: selectedDeductions.icod,
+
         supplementary,
         activeLoanBalance,
         udiRebate,
-        supplementaryCharge:
-            supplementaryChargeToPay,
+
+        supplementaryCharge: 0,
         changeAmount,
     });
 
-    const schedules = computationScheduleManager({
-        effectivityDate,
-        transactionDate: values.transactionDate,
+    // Deduct previous outstanding fee payments once
 
-        installment,
-        loanTerms: values.terms,
+    const cashOutBeforeSLCharges = {
+        ...cashOutBeforeSLChargesBase,
+
+        totalCashOut: Math.round(
+            (
+                cashOutBeforeSLChargesBase.totalCashOut -
+                previousFeePaymentResult.totalPayment
+            ) * 100
+        ) / 100,
+    };
+
+    // =================================================
+    // 12. SELECTED SL CHARGE CALCULATION
+    // =================================================
+
+    const chargeSelection =
+        calculateSelectedSupplementaryCharges(
+            selectableCharges,
+            selectedChargeIds,
+            cashOutBeforeSLCharges.totalCashOut
+        );
+
+    // Negative cash-out is allowed for review.
+    const supplementaryChargeToPay =
+        chargeSelection.selectedTotal;
+
+    // =================================================
+    // 13. FINAL CASH-OUT
+    // =================================================
+
+    // Calculate final cash-out with current deductions
+    // and selected supplementary charges.
+
+    const finalCashOutBase = calculateNetCashOut({
+        transactionType,
         principalAmount,
         udi,
 
+        collectionFee: selectedDeductions.collectionFee,
+        processingFee: selectedDeductions.processingFee,
+        loanProtectionFee: selectedDeductions.loanProtectionFee,
+        icod: selectedDeductions.icod,
+
         supplementary,
-        // Pass only the existing balance here.
-        // The schedule manager adds the new supplementary amount.
-        supplementaryBalance:
-            activeLoan?.supplementaryBalance ?? 0,
+        activeLoanBalance,
+        udiRebate,
+
+        supplementaryCharge: supplementaryChargeToPay,
+
+        changeAmount,
     });
+
+    // Apply previous outstanding fee payments
+    const cashOut = {
+        ...finalCashOutBase,
+
+        totalCashOut: Math.round(
+            (
+                finalCashOutBase.totalCashOut -
+                previousFeePaymentResult.totalPayment
+            ) * 100
+        ) / 100,
+    };
+
+    // =================================================
+    // 14. LOAN SCHEDULES
+    // =================================================
+
+    const schedules =
+        computationScheduleManager({
+            effectivityDate,
+            transactionDate:
+                values.transactionDate,
+
+            installment,
+            loanTerms: values.terms,
+            principalAmount,
+            udi,
+
+            supplementary,
+
+            // Existing SL balance only.
+            // The schedule manager adds the new SL.
+            supplementaryBalance:
+                existingSupplementaryBalance,
+        });
+
+    // =================================================
+    // 15. RETURN COMPUTATION RESULT
+    // =================================================
 
     return {
         pensionerId: values.pensionerId,
@@ -321,58 +655,98 @@ export function computationManager({
 
         principalAmount,
         udi,
+
         processingFee,
         collectionFee,
         loanProtectionFee,
         icod,
+
+        icodAmountToPay: icodPayment.amountToPay,
+
+        icodRemainingBalance: icodPayment.remainingBalance,
+
+        icodPaymentStatus: icodPayment.status,
+
+
         udiRebate,
 
-        effectivityDate: formatDateApi(effectivityDate),
+        effectivityDate: effectivityDateString,
 
+        // Existing LR settlement
         activeLoanBalance,
         sourceResidualBalance,
         sourceLoanStatus,
 
+        actualPaidTerms,
+        projectedPaidTerms,
+        effectivePaidTerms,
+
+        projectedLRCollections,
+
+        projectedLRPeriods:
+            renewalProjection?.projectedLRPeriods ?? [],
+
+        shouldCreateSourceCollection,
+
+        sourceCollectionCount:
+            renewalProjection?.projectedPaidTerms ?? 0,
+
+        // Supplementary charges
         carriedSupplementaryCharge,
         currentSupplementaryCharge,
         supplementaryChargeToPay,
 
         supplementaryChargeAvailableMonths:
-            isRenew
-                ? currentOutstandingCharges.length
-                : 0,
+            uniqueOutstandingCharges.length,
 
         supplementaryChargeMonthsToPay:
-            selectedCurrentCharges.length,
+            selectedCharges.length,
 
         supplementaryChargeRemainingMonths:
-            Math.max(
-                0,
-                currentOutstandingCharges.length -
-                selectedCurrentCharges.length
-            ),
+            chargeSelection.remainingCharges.length,
 
         supplementaryChargeBreakdown:
-            selectedCurrentCharges.map(mapCharge),
+            selectedCharges.map(mapCharge),
 
         carriedSupplementaryChargeBreakdown:
-            isRenew
-                ? carriedOutstandingCharges.map(mapCharge)
-                : [],
+            selectedCarriedCharges.map(mapCharge),
 
+        selectedSupplementaryChargeIds:
+            chargeSelection.selectedChargeIds,
+
+        remainingSupplementaryCharges:
+            chargeSelection.remainingCharges,
+
+        cashOutBeforeSLCharges:
+            cashOutBeforeSLCharges.totalCashOut,
+
+        // Cash-out
         grossCashOut: cashOut.grossCashout,
         netCashOut: cashOut.netCashOut,
         totalCashOut: cashOut.totalCashOut,
 
-        renewedFromId: isRenew
-            ? activeLoan?.id
-            : undefined,
+        renewedFromId:
+            isRenew
+                ? activeLoan?.id
+                : undefined,
 
-        shouldCreateSourceCollection,
-        sourceCollectionCount:
-            sourceLoanBalance.collectionCount,
+        // Schedules
+        schedules,
 
-        schedules
+        selectedDeductions,
+
+        // All available charges for the UI
+        availableCurrentSupplementaryCharges:
+            availableCurrentCharges,
+
+        availableCarriedSupplementaryCharges:
+            availableCarriedCharges,
+
+        previousFeePayments:
+            previousFeePaymentResult.allocations,
+
+        totalPreviousFeePayments:
+            previousFeePaymentResult.totalPayment,
     };
 }
 

@@ -23,10 +23,12 @@ export function useComputationCalculation(
 
         const { values } = input;
 
+        const isChange13thMonth =
+            values.transactionType === "CHANGE";
+
         if (
             !values.transactionDate ||
-            values.terms <= 0 &&
-            values.transactionType !== "CHANGE_13TH_MONTH"
+            (!isChange13thMonth && values.terms <= 0)
         ) {
             return {
                 result: null,
@@ -35,8 +37,10 @@ export function useComputationCalculation(
         }
 
         try {
+            const result = computationManager(input);
+
             return {
-                result: computationManager(input),
+                result,
                 error: null,
             };
         } catch (error) {

@@ -1,3 +1,5 @@
+import { DeductionCode } from "@repo/shared";
+
 export type PensionerStatus =
     | "Active"
     | "Inactive"
@@ -5,9 +7,10 @@ export type PensionerStatus =
 
 export type TransactionType =
     | "NEW"
-    | "CLOSED_RENEW"
+    | "RENEW"
     | "TRANSFER"
-    | "CHANGE_13TH_MONTH"
+    | "CHANGE"
+    | "ADVANCE"
     | "RETURNEE"
     | "ADDITIONAL";
 
@@ -31,6 +34,7 @@ export interface Pensioner {
 export interface ActiveLoan {
     id: number;
     pensionerId: number;
+    pensionLoanInfoId: number;
     accountNumber: string;
 
     transactionType: TransactionType;
@@ -46,7 +50,7 @@ export interface ActiveLoan {
 
     transactionDate: string;
     effectivityDate: string;
-    nextCollectionDate: string;
+    nextCollectionDate: string | null;
 
     udi: number;
 }
@@ -74,39 +78,72 @@ export interface ComputationSlipFormValues {
     installment: number;
     terms: number;
 
+    icodAmountToPay: number | null;
+    selectedDeductionCodes: DeductionCode[];
+
     supplementary: number;
     supplementaryBalance: number;
 
     changeAmount: number;
 
     applySupplementaryCharge: boolean;
-    supplementaryChargeMonthsToPay: number;
+    selectedSupplementaryChargeIds: string[];
+
+    previousFeePayments: PreviousFeePayment[];
 }
 
 export interface ComputationResult {
+    // Loan information
     principalAmount: number;
+    installment?: number;
+    terms?: number;
+
+    // UDI
     udi: number;
     udiRebate: number;
 
-    grossCashOut: number;
-
+    // Fees
     processingFee: number;
     collectionFee: number;
     icod: number;
     loanProtectionFee: number;
 
-    netCashOut: number;
+    // Existing LR
+    activeLoanBalance: number;
 
+    // Supplementary loan
     supplementary: number;
     supplementaryBalance: number;
 
-    activeLoanBalance: number;
-
+    // Supplementary charges
     carriedSupplementaryCharge: number;
     currentSupplementaryCharge: number;
     supplementaryChargeToPay: number;
 
+    // Cash-out
+    grossCashOut: number;
+    netCashOut: number;
     totalCashOut: number;
 
+    // Effectivity
     effectivityDate: string | null;
+
+    // Optional display information
+    accountNumber?: string;
+    transactionType?: TransactionType;
 }
+
+export type PreviousOutstandingFee = {
+    feeItemId: string;
+    loanId: number;
+    transactionType: string;
+    deductionCode: string;
+    originalAmount: number;
+    paidAmount: number;
+    outstandingAmount: number;
+};
+
+export type PreviousFeePayment = {
+    feeItemId: string;
+    amountToPay: number;
+};

@@ -14,14 +14,9 @@ import { LoanSchedules } from "./LoanSchedules";
 import { SupplementaryDetails } from "./SupplementaryDetails";
 import { ExistingLoanDetails } from "./ExistingLoanDetails";
 
-import type {
-    ActiveLoan,
-} from "../../../types/computationSlip.types";
+import type { ActiveLoan, PreviousOutstandingFee } from "../../../types/computationSlip.types";
 
-import type {
-    ComputationManagerResult,
-} from "../../../services/computation.manager";
-
+import type { ComputationManagerResult } from "../../../services/computation.manager";
 
 export type ComputationDetailTab =
     | "fees"
@@ -35,6 +30,10 @@ type ComputationDetailsProps = {
     result: ComputationManagerResult | null;
     activeLoan: ActiveLoan | null;
     initialTab?: ComputationDetailTab;
+
+    selectedChargeIds: string[];
+    onSelectedChargeIdsChange: (ids: string[]) => void;
+    previousOutstandingFees: PreviousOutstandingFee[];
 };
 
 const tabs = [
@@ -66,6 +65,9 @@ export function ComputationDetails({
     result,
     activeLoan,
     initialTab = "fees",
+    selectedChargeIds,
+    onSelectedChargeIdsChange,
+    previousOutstandingFees
 }: ComputationDetailsProps) {
     const [activeTab, setActiveTab] =
         useState<ComputationDetailTab>(initialTab);
@@ -105,7 +107,7 @@ export function ComputationDetails({
             <button
                 type="button"
                 aria-label="Close computation details"
-                className="absolute inset-0 bg-slate-950/40"
+                className="absolute inset-0 bg-slate-950/40 text-black"
                 onClick={onClose}
             />
 
@@ -172,7 +174,10 @@ export function ComputationDetails({
 
                 <div className="flex-1 overflow-y-auto p-6">
                     {activeTab === "fees" && (
-                        <FeeBreakdown result={result} />
+                        <FeeBreakdown
+                            result={result}
+                            previousOutstandingFees={previousOutstandingFees}
+                        />
                     )}
 
                     {activeTab === "schedule" && (
@@ -180,7 +185,13 @@ export function ComputationDetails({
                     )}
 
                     {activeTab === "supplementary" && (
-                        <SupplementaryDetails result={result} />
+                        <SupplementaryDetails
+                            result={result}
+                            selectedChargeIds={selectedChargeIds}
+                            onSelectedChargeIdsChange={
+                                onSelectedChargeIdsChange
+                            }
+                        />
                     )}
 
                     {activeTab === "existing-loan" && (
